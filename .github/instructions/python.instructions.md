@@ -1,9 +1,10 @@
 ---
-applyTo: "src/**/*.py"
+applyTo: "**/*.py"
 description: "Python ファイルを編集・作成・レビューするときに使う。pyproject準拠, コード品質, 仮想環境の補足ルール。"
 ---
 
 - パッケージ追加は勝手に行わず、必要時はユーザー確認のうえ uv add を使う
+- pip コマンドを直接利用しない
 - Python の実行や検証は uv run を使う
 - ファイルパスの操作は os.path ではなく pathlib.Path を使う
 
