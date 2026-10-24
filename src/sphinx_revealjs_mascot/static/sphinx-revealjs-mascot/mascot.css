@@ -1,0 +1,29 @@
+#chara {
+    position: fixed;
+    right: 2vw;
+    bottom: 2vh;
+    width: var(--mascot-width);
+    z-index: 30;
+}
+
+#chara,
+#chara * {
+    pointer-events: none;
+}
+
+#chara .sway,
+#chara .breath,
+#chara .react {
+    transform-origin: center bottom;
+}
+
+#chara .facing {
+    transform: scaleX(-1);
+}
+
+#chara-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    user-select: none;
+}

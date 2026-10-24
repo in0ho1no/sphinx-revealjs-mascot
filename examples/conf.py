@@ -5,6 +5,8 @@ from pathlib import Path
 
 from sphinx.application import Sphinx
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+
 project = 'sphinx-revealjs-mascot examples'
 extensions = ['sphinx_revealjs', 'myst_parser', 'sphinx_revealjs_mascot']
 root_doc = 'slides'
