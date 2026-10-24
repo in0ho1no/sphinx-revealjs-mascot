@@ -1,0 +1,48 @@
+{
+  "source_distribution": {
+    "name": "sphinx-revealjs",
+    "version": "3.2.1"
+  },
+  "notice": {
+    "path": "NOTICES.txt",
+    "sha256": "8f7cce5991ef1e2df132eec045f62891a921c66c332420be2be50a5845c841d9"
+  },
+  "components": [
+    {
+      "name": "reveal.js",
+      "license": "MIT",
+      "source": "https://github.com/hakimel/reveal.js/blob/5.2.0/LICENSE",
+      "original_sha256": "34014800f4126ac2525e224166f099f26628612e95c41f76d70841b63138c989"
+    },
+    {
+      "name": "Source Sans Pro",
+      "license": "OFL-1.1",
+      "source": "sphinx_revealjs/_static/revealjs/dist/theme/fonts/source-sans-pro/LICENSE",
+      "original_sha256": "bb5f5f9b59ff3ab358efed2c5436e8aa2e12444959c4bde82167b874d5db1b1c"
+    },
+    {
+      "name": "League Gothic",
+      "license": "OFL-1.1",
+      "source": "https://github.com/theleagueof/league-gothic/blob/master/OFL.md",
+      "original_sha256": "6fa7527b6f9894e0dd8d5ae0050b51d37de15bcf7e6269d8dd690eb9df59aa40"
+    },
+    {
+      "name": "highlight.js",
+      "license": "BSD-3-Clause",
+      "source": "https://raw.githubusercontent.com/highlightjs/highlight.js/11.9.0/LICENSE",
+      "original_sha256": "6c081431591d9df696c82dc598fe1423765b8a299b200ed00b281afd0f64c490"
+    },
+    {
+      "name": "Marked",
+      "license": "MIT AND BSD-3-Clause",
+      "source": "https://raw.githubusercontent.com/markedjs/marked/v4.3.0/LICENSE.md",
+      "original_sha256": "8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c"
+    },
+    {
+      "name": "highlightjs-line-numbers.js",
+      "license": "MIT",
+      "source": "https://raw.githubusercontent.com/wcoder/highlightjs-line-numbers.js/v2.8.0/LICENSE",
+      "original_sha256": "36e83328ae7af440c6ff511334673aa2dd4291a3a0deebf90a3c4a57d65c85e4"
+    }
+  ]
+}
