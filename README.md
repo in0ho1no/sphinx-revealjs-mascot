@@ -1,9 +1,9 @@
 # sphinx-revealjs-mascot
 
 Sphinx / sphinx-revealjs のスライドにキャラクターを常駐させる拡張です。
-現在は CSS・JavaScript・標準画像を自動で組み込む最小構成を実装しています。
+CSS・JavaScript・画像の自動組み込み、設定値の検証、専用ディレクティブ、表示位置と向きの切り替えを実装しています。
 ユーザーによる確認で、確認用 HTML を直接開いた際の右下へのキャラクター表示を確認済みです。
-専用ディレクティブとモーションは未実装です。
+モーションとリアクション、キーによる表示切り替えは未実装です。
 `src/main.py` と `src/tests/test_main.py` はテンプレートの動作確認用サンプルです。
 
 初期版の仕様と利用サンプルへの案内は [仕様書](docs/SPEC.md) を参照してください。
@@ -37,4 +37,19 @@ HTML 出力フォルダは、画像・CSS・JavaScript・`third_party` を含む
 この段階の拡張はソースから参照し、標準画像は既存の原本から自動コピーします。
 パッケージのインストールによる利用は未対応です。
 表示幅は調整・確定前の仮値です。進捗と検証結果は [実装計画](Plan.md) を参照してください。
-既存の `examples/slides.md` と `examples/fragments.rst` は、専用ディレクティブを実装してからビルドを確認します。
+
+## 設定と本文指定のサンプル
+
+既存の Markdown と reStructuredText のサンプルもビルドできます。
+
+```sh
+uv run --frozen --no-sync --offline sphinx-build -W -b revealjs examples examples/_build/revealjs
+```
+
+`examples/_build/revealjs/slides.html` でスライドごとの位置・向きと、指定のないスライドでの既定位置への復帰を確認できます。
+戻る操作でも移動先の位置を使います。
+`examples/_build/revealjs/fragments.html` では、ディレクティブで囲んだ段落・箇条書きをまとめて段階表示します。
+今回の変更のブラウザでの実表示は未確認です。
+
+設定 API と画像の命名形式は [仕様書](docs/SPEC.md#extension-configuration) を参照してください。
+アクション指定は HTML の属性へ出力します。リアクション、無操作タイマー、表示切り替えキーの動作は次の実装段階で追加します。

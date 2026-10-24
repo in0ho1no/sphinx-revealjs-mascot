@@ -1,9 +1,36 @@
 #chara {
     position: fixed;
-    right: 2vw;
-    bottom: 2vh;
     width: var(--mascot-width);
     z-index: 30;
+}
+
+#chara[data-position="bottom-right"],
+#chara[data-position="top-right"] {
+    right: 2vw;
+}
+
+#chara[data-position="bottom-left"],
+#chara[data-position="top-left"] {
+    left: 2vw;
+}
+
+#chara[data-position="top-right"],
+#chara[data-position="top-left"] {
+    top: 2vh;
+}
+
+#chara[data-position="bottom-right"],
+#chara[data-position="bottom-left"] {
+    bottom: 2vh;
+}
+
+#chara[data-position="center"] {
+    left: var(--mascot-x);
+    top: var(--mascot-y);
+}
+
+#chara[data-position="center"] > .anchor {
+    transform: translate(-50%, -50%);
 }
 
 #chara,
@@ -18,7 +45,7 @@
 }
 
 #chara .facing {
-    transform: scaleX(-1);
+    transform: scaleX(var(--mascot-facing));
 }
 
 #chara-img {

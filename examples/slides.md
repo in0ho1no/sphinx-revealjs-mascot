@@ -4,6 +4,7 @@
 :hidden:
 
 fragments
+minimal/index
 ```
 
 ## ジャンプで始める
