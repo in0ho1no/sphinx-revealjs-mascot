@@ -49,7 +49,8 @@ uv run --frozen --no-sync --offline sphinx-build -W -b revealjs examples example
 `examples/_build/revealjs/slides.html` でスライドごとの位置・向きと、指定のないスライドでの既定位置への復帰を確認できます。
 戻る操作でも移動先の位置を使います。
 `examples/_build/revealjs/fragments.html` では、ディレクティブで囲んだ段落・箇条書きをまとめて段階表示します。
-今回の変更のブラウザでの実表示は未確認です。
+ユーザーによる実表示確認で、左右反転・位置の上書き・既定位置への復帰を確認済みです。
+fragment のまとめ表示については、ブラウザでの確認報告はまだありません。
 
 設定 API と画像の命名形式は [仕様書](docs/SPEC.md#extension-configuration) を参照してください。
 アクション指定は HTML の属性へ出力します。リアクション、無操作タイマー、表示切り替えキーの動作は次の実装段階で追加します。
