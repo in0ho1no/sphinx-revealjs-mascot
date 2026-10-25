@@ -48,6 +48,11 @@ pull request と `develop` への push では、[Tests](.github/workflows/tests.
 
 ## 依存の更新監視
 
+uv による依存解決には、[pyproject.toml](pyproject.toml) の `exclude-newer` で公開後の待機期間を設けています。
+待機設定の導入で既存環境を巻き戻さないよう、一部の依存には確認済みの版の公開日時を上限とする一時例外があります。
+待機期間が満了した後は `exclude-newer-package` の該当する例外を解除し、lockfile を更新してください。
+例外が残っている間、その日時より後に公開された対象パッケージは選択されません。解除日は設定のコメントを参照してください。
+
 依存の更新漏れを防ぐため、毎週金曜 17:30 (Asia/Tokyo) に次の確認を行います。
 
 - Dependabot が GitHub Actions・Docker イメージ・Python 依存 (uv) の更新を `develop` 向けの PR にします。

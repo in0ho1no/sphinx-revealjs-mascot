@@ -3,7 +3,9 @@
 import json
 import re
 import sys
+from http.client import BadStatusLine
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -76,3 +78,65 @@ def test_unexpected_index_is_reported_as_check_failure(monkeypatch: pytest.Monke
 
     assert status == 2
     assert not body.exists()
+
+
+@pytest.fixture
+def https(monkeypatch: pytest.MonkeyPatch) -> tuple[MagicMock, MagicMock]:
+    response = MagicMock()
+    response.status = 200
+    response.read.return_value = json.dumps(_INDEX).encode('utf-8')
+    response.__enter__.return_value = response
+    constructor = MagicMock()
+    constructor.return_value.getresponse.return_value = response
+    monkeypatch.setattr(check_node_version, 'HTTPSConnection', constructor)
+    return constructor, response
+
+
+def test_online_index_uses_only_the_official_https_host_and_path(https: tuple[MagicMock, MagicMock]) -> None:
+    constructor, response = https
+
+    assert check_node_version.load_index(None) == _INDEX
+
+    constructor.assert_called_once_with('nodejs.org', timeout=30)
+    constructor.return_value.request.assert_called_once_with('GET', '/dist/index.json')
+    constructor.return_value.getresponse.assert_called_once_with()
+    constructor.return_value.close.assert_called_once_with()
+    response.__exit__.assert_called_once()
+
+
+@pytest.mark.parametrize('status', [301, 302, 303, 307, 308, 400, 403, 404, 500])
+def test_redirects_and_http_errors_are_rejected_without_reading_the_body(https: tuple[MagicMock, MagicMock], status: int) -> None:
+    constructor, response = https
+    response.status = status
+
+    with pytest.raises(ValueError, match=f'HTTP {status}'):
+        check_node_version.load_index(None)
+
+    constructor.return_value.request.assert_called_once_with('GET', '/dist/index.json')
+    response.read.assert_not_called()
+    constructor.return_value.close.assert_called_once_with()
+    response.__exit__.assert_called_once()
+
+
+def test_invalid_online_json_still_closes_the_connection(https: tuple[MagicMock, MagicMock]) -> None:
+    constructor, response = https
+    response.read.return_value = b'invalid json'
+
+    with pytest.raises(json.JSONDecodeError):
+        check_node_version.load_index(None)
+
+    constructor.return_value.close.assert_called_once_with()
+    response.__exit__.assert_called_once()
+
+
+def test_protocol_errors_are_reported_as_check_failure(
+    https: tuple[MagicMock, MagicMock], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    constructor, _ = https
+    constructor.return_value.getresponse.side_effect = BadStatusLine('invalid response')
+    monkeypatch.setattr(sys, 'argv', ['check_node_version.py'])
+
+    assert check_node_version.main() == 2
+
+    assert 'invalid response' in capsys.readouterr().err
+    constructor.return_value.close.assert_called_once_with()

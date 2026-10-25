@@ -8,9 +8,9 @@ import re
 import sys
 import tomllib
 from dataclasses import dataclass
+from http.client import HTTPException, HTTPSConnection
 from pathlib import Path
 from typing import Any, cast
-from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 _VERSION = re.compile(r'v?(\d+)\.(\d+)\.(\d+)')
@@ -116,9 +116,16 @@ def load_index(index_file: Path | None) -> Index:
     """公開版の一覧を、指定されたファイルまたは nodejs.org から読み込む。"""
     if index_file is not None:
         return cast(Index, json.loads(index_file.read_text(encoding='utf-8')))
-    # URL を引数で受け取らないのは、取得先を公式の一覧に限定するため。
-    with urlopen('https://nodejs.org/dist/index.json', timeout=30) as response:
-        return cast(Index, json.load(response))
+    # 汎用 URL の処理とリダイレクト追従は、公式の取得先以外を許すため使わない。
+    connection = HTTPSConnection('nodejs.org', timeout=30)
+    try:
+        connection.request('GET', '/dist/index.json')
+        with connection.getresponse() as response:
+            if response.status != 200:
+                raise ValueError(f'nodejs.org の公開版一覧を取得できません: HTTP {response.status}')
+            return cast(Index, json.load(response))
+    finally:
+        connection.close()
 
 
 def main() -> int:
@@ -131,7 +138,7 @@ def main() -> int:
     try:
         pinned = pinned_version(arguments.config)
         releases = newer_releases(pinned, load_index(arguments.index_file))
-    except (OSError, ValueError, KeyError, TypeError) as error:
+    except (OSError, HTTPException, ValueError, KeyError, TypeError) as error:
         print(f'Node.js の版を確認できません: {error}', file=sys.stderr)
         return 2
     if not releases:
