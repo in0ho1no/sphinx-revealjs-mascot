@@ -1,24 +1,16 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const test = require("node:test");
 
-const repository = path.resolve(__dirname, "../..");
-const contract = JSON.parse(execFileSync("uv", [
-    "--cache-dir", path.join(repository, ".uv_cache"), "run", "--frozen", "--no-sync", "--offline",
-    "python", "-X", "utf8", "-c", [
-        "import sys; sys.path.insert(0, 'src')",
-        "import json",
-        "from dataclasses import asdict",
-        "from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, STATES",
-        "from sphinx_revealjs_mascot.directives import _EXPLICIT_ACTIONS",
-        "print(json.dumps({'actions': {name: asdict(value) for name, value in ACTIONS.items()}, 'defaults': DEFAULT_ACTIONS, 'states': STATES, 'explicit': _EXPLICIT_ACTIONS}))",
-    ].join("\n"),
-], { cwd: repository, encoding: "utf8" }));
+// Python 側のアクション定義は、test_mascot_runtime.py が環境変数で渡す。
+if (!process.env.SPHINX_REVEALJS_MASCOT_CONTRACT) {
+    throw new Error("uv run pytest src/tests/test_mascot_runtime.py から実行してください");
+}
+const contract = JSON.parse(process.env.SPHINX_REVEALJS_MASCOT_CONTRACT);
 
 const source = fs.readFileSync(
     path.join(__dirname, "../sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js"),
@@ -453,19 +445,7 @@ test("ブラウザの上限を超える無操作時間を安全なタイマー�
     assert.ok([...state.clock.pending.values()].some((job) => job.time === 2147483647));
 });
 
-test("Python のアクション定義と明示指定・既定アクション・CSS の状態名が一致する", () => {
-    const names = Object.keys(contract.actions);
-    assert.deepEqual(contract.explicit, names.filter((name) => contract.actions[name].explicit));
-    for (const name of Object.values(contract.defaults)) {
-        assert.ok(contract.explicit.includes(name));
-    }
-    for (const [name, definition] of Object.entries(contract.actions)) {
-        assert.ok(contract.states.includes(definition.image), name);
-        assert.ok(Number.isFinite(definition.duration) && definition.duration >= 0, name);
-    }
-    const css = fs.readFileSync(path.join(repository, "src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.css"), "utf8");
-    const cssStates = [...new Set([...css.matchAll(/\[data-state="([^"]+)"\]/g)].map((match) => match[1]))].sort();
-    assert.deepEqual(cssStates, names.filter((name) => contract.actions[name].motion).sort());
+test("明示指定できる各アクションで状態と画像を切り替える", () => {
     for (const action of contract.explicit) {
         const state = fixture();
         state.emit("fragmentshown", { fragment: slide(null, { action }) });

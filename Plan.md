@@ -158,7 +158,7 @@ JavaScript テストが pytest・CI から実行されず、実行方法も記�
 
 - [x] 段階1: 依存の更新監視を追加する。`mise.toml` で Node.js を固定し、定期 workflow で同じメジャーの新しい版を確認する。Dependabot に uv を追加する。
 - [x] 段階2: pyright が使う Node.js を mise で固定した版へ寄せる。
-- [ ] 段階3: Python・JavaScript・CSS の名前の対応を pytest で確認し、pytest から JavaScript テストを起動する。CI で品質検証を実行し、必須チェックに加える。
+- [x] 段階3: Python・JavaScript・CSS の名前の対応を pytest で確認し、pytest から JavaScript テストを起動する。CI で品質検証を実行し、必須チェックに加える。
 
 #### 段階1の結果
 
@@ -179,7 +179,18 @@ JavaScript テストが pytest・CI から実行されず、実行方法も記�
 - README の開始手順、仕様書の Node.js の前提、`sk-python-quality` の実行環境を更新した。
 - mise の shims を PATH に置くと、リポジトリ内の `node` は固定版 24.22.1 になり、pyright もこの版で実行してエラーなしで完了した。
 - PATH に `node` がなく、nodeenv の取得先も残っていない場合、pyright は `nodeenv failed` で失敗し、Node.js を取得しないことを確認した。表示される `pyright[nodejs]` の導入案内に従わないよう、README と `sk-python-quality` に記載した。
-- 起動中のアプリや端末は、PATH の変更を再起動まで反映しない。検証では shims を PATH の先頭に加えて確認した。
+- 起動中のアプリや端末は、PATH の変更を再起動まで反映しない。再起動後は、PATH を変えずに pyright が固定版で完了することを確認した。
+
+#### 段階3の結果
+
+- [test_mascot_contract.py](src/tests/test_mascot_contract.py) で、既定アクションの明示指定可否、画像状態、CSS の `data-state` セレクター、`mascot.js` に直接書いたアクション名・画像名・既定アクションの種類を Python の定義と照合する。Node.js を使わずに実行できる。
+- [test_mascot_runtime.py](src/tests/test_mascot_runtime.py) は、PATH の `node` が `mise.toml` の固定版と一致することを確認し、Python の定義を環境変数で渡して JavaScript テストを起動する。`node` がない場合や版が異なる場合は、スキップせず失敗にする。
+- JavaScript テストから `uv` の呼び出しと静的な照合を外し、実行時の動作の検証に絞った。単独で実行した場合は、pytest からの実行を促して失敗する。
+- JavaScript テストの件数が 0 件でなく、すべて成功したことを TAP 形式の集計で確認する。
+- [Tests](.github/workflows/tests.yml) は、mise で固定した Node.js と uv を導入し、ruff・mypy・pyright・pytest を実行する。Node.js の新しい版の有無は、PR の内容と無関係なため警告に留める。
+- mise-action v5.2.0 と setup-uv v10.3.0 は、Dependabot の待機日数に合わせ、公開から7日以上経過した最新版をコミット SHA で固定した。
+- [gh-RequiredCI.json](git-setup/gh-RequiredCI.json) の必須チェックに `tests` を加えた。GitHub への反映は利用者が行う。
+- ローカルでは、pytest 全体、node がない場合と別の版が先に見つかる場合の失敗、名前の変更を照合で検出できることを確認した。CI 上の実行と、Linux での pytest 全体の実行は未確認である。
 
 ## 調整・検証・配布設定
 

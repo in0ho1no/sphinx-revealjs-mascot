@@ -30,6 +30,10 @@
           {
             "context": "gitleaks",
             "integration_id": 15368
+          },
+          {
+            "context": "tests",
+            "integration_id": 15368
           }
         ]
       }
