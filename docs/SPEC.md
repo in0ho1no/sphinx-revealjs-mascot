@@ -19,7 +19,7 @@ sphinx-revealjs で作成したスライドに組み込める Sphinx 拡張と�
 | 記述形式 | MyST-Parser による Markdown と reStructuredText |
 | 開発環境 | Python / uv。具体的な要件は冒頭の正本を参照 |
 | キャラクター実装 | 素の HTML / CSS / JavaScript。追加の JavaScript ライブラリを使わない |
-| Node.js / npm | 拡張のビルド・利用のためには要求しない。既存の開発ツールの要件は変更しない |
+| Node.js / npm | 拡張のビルド・利用のためには要求しない。開発ツールの実行には `mise.toml` で固定した Node.js を使う |
 
 ## 機能要件
 
@@ -131,8 +131,11 @@ MyST Markdown と reStructuredText の実際の記述例は [サンプル](#samp
 任意座標は各軸 0〜100% とし、書式不正や範囲外の値はビルドエラーにする。
 画像の中心を指定するため、画面端付近では画像の一部が画面外に出ることを許容する。
 定型位置では画像全体を内側に置き、モーションの見切れを避ける余白を設ける。
+余白は画像の描画寸法と、跳躍・回転・呼吸・拡大および「Zzz」の最大変位から計算する。
 
 サイズは画面幅に対する割合で `conf.py` に設定し、全スライドで共通にする。
+指定幅ではモーション用の余白を含めて画面内に収まらない場合、収まる幅を上限とする。
+この上限は任意座標を含む全スライドで共通に適用し、ウィンドウの大きさが変わった場合は再計算する。
 スライド・fragment 単位のサイズ変更は提供しない。
 
 #### 向きの自動切り替え <a id="automatic-facing"></a>
@@ -149,6 +152,7 @@ MyST Markdown と reStructuredText の実際の記述例は [サンプル](#samp
 初期表示・スライド移動・再表示時に、適用する位置から向きを決める。スライドを戻る場合も同じ規則に従う。
 反転は CSS の `scaleX(-1)` でキャラクター画像に適用し、左右別の画像は要求しない。
 「Zzz」などの文字・記号は反転せず、読める向きに保つ。
+`doze` の傾きも画像の向きに合わせ、左右どちらの配置でも画面中央側へ傾ける。
 
 ## キャラクター画像の要件
 
@@ -256,9 +260,12 @@ project/
 | `revealjs_mascot_image_dir` | 画像フォルダ。相対パスは `conf.py` の所在を基準に解決 | `None`。標準画像を使用 |
 | `revealjs_mascot_image_pattern` | [ファイル名の指定と検証](#image-filename-validation) で定義した命名形式 | `'{state}.png'` |
 | `revealjs_mascot_position` | [表示位置とサイズ](#position-and-size) で定義した位置を文字列で指定 | `'bottom-right'` |
-| `revealjs_mascot_width` | 画面幅に対する割合を数値で指定。0より大きく100以下 | 実挙動確認で決定 |
+| `revealjs_mascot_width` | 画面幅に対する割合を数値で指定。0より大きく100以下 | [config.py](../src/sphinx_revealjs_mascot/config.py) の `CONFIG_DEFAULTS` を参照（初版確定） |
 | `revealjs_mascot_idle_timeout` | ウトウトに入るまでの秒数。正の数値 | `45` |
 | `revealjs_mascot_toggle_key` | 表示切り替えに使う単一の文字キー | `'m'`（M キー） |
+
+標準画像で Chrome・Edge の表示幅・余白・モーションを確認し、現在の値を初版の既定値とする。
+表示幅は上記の `CONFIG_DEFAULTS`、モーションの寸法・周期とアクションの長さは同じファイルの `MOTION`・`ACTIONS`、まばたきは [mascot.js](../src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js) の `BLINK` を正本とし、細かな値を本書へ転記しない。
 
 ### ブラウザへの組み込み
 
@@ -291,7 +298,7 @@ reveal.js はファイルから直接実行できる形式を提供している�
 - 導入時点の安定版から Sphinx・sphinx-revealjs・MyST-Parser の組み合わせを1つ選び、検証する。選定結果は `pyproject.toml` と `uv.lock` に反映し、本書にバージョンを転記しない。
 - 選んだ版で CSS・JavaScript・画像の自動組み込みと初期化タイミングを確認する。参照先は sphinx-revealjs の [Setup](https://sphinx-revealjs.readthedocs.io/en/stable/setup/) と [Configurations](https://sphinx-revealjs.readthedocs.io/en/stable/configurations/) とする。
 - 専用ディレクティブを MyST Markdown と reStructuredText の双方でビルドし、対象スライドへの設定と fragment のまとまりを確認する。
-- 標準画像で、表示幅の既定値・定型位置の余白・揺れや呼吸の周期と振れ幅・まばたきの間隔と長さ・リアクションの長さを調整する。
+- 標準画像の表示幅・余白・モーションは Chrome・Edge で確認し、初版の既定値を確定した。確認範囲と残る検証は [実装計画](Plan.md) を参照する。
 - 任意座標の端付近での表示と、実際の投影・画面共有での見え方を確認する。
 
 ### 初期版に含めない項目

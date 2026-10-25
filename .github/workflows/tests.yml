@@ -1,0 +1,43 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install Node.js pinned by mise
+        uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Install dependencies
+        run: uv sync --locked
+      - name: Lint
+        run: uv run --frozen ruff check src scripts examples/conf.py
+      - name: Check formatting
+        run: uv run --frozen ruff format --check src scripts examples/conf.py
+      - name: Type check with mypy
+        run: uv run --frozen mypy src scripts examples/conf.py
+      - name: Type check with pyright
+        run: uv run --frozen pyright
+      - name: Test
+        run: uv run --frozen pytest
+      - name: Warn when pinned Node.js is outdated
+        # 新しい Node.js の公開は PR の内容と無関係なため、失敗にせず警告に留める。
+        run: |
+          status=0
+          uv run --frozen python scripts/check_node_version.py || status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "::warning title=Node.js::mise.toml の Node.js より新しい版があるか、確認に失敗しました。Node.js Version workflow の Issue を確認してください。"
+          fi

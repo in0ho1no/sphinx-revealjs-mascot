@@ -4,9 +4,9 @@
     "postToolUse": [
       {
         "type": "command",
-        "command": "python .github/hooks/entrypoint.py post",
-        "bash": "python .github/hooks/entrypoint.py post",
-        "powershell": "python .github\\hooks\\entrypoint.py post",
+        "command": "uv run --no-project python .github/hooks/entrypoint.py post",
+        "bash": "uv run --no-project python .github/hooks/entrypoint.py post",
+        "powershell": "uv run --no-project python .github\\hooks\\entrypoint.py post",
         "cwd": ".",
         "timeout": 15,
         "timeoutSec": 15

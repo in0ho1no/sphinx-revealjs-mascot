@@ -3,6 +3,7 @@ name = "sphinx-revealjs-mascot"
 version = "0.1.0"  # Major.Minor.Patch
 description = "sphinx-revealjs-mascot"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.14"
 dependencies = [
     "docutils>=0.21,<0.23",
@@ -10,14 +11,57 @@ dependencies = [
     "sphinx-revealjs>=3.2.1",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sphinx_revealjs_mascot"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"examples/_static/mascot/joubitaki" = "sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/images"
+"third_party/README.md" = "sphinx_revealjs_mascot/third_party/README.md"
+"third_party/manifest.json" = "sphinx_revealjs_mascot/third_party/manifest.json"
+"third_party/NOTICES.txt" = "sphinx_revealjs_mascot/third_party/NOTICES.txt"
+"LICENSE" = "sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/LICENSE"
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "src/sphinx_revealjs_mascot",
+    "examples/_static/mascot/joubitaki",
+    "third_party/README.md",
+    "third_party/manifest.json",
+    "third_party/NOTICES.txt",
+    "pyproject.toml",
+    "README.md",
+    "docs/SPEC.md",
+    "LICENSE",
+]
+
 [dependency-groups]
 dev = [
+    "hatchling>=1.32.4",
     "mypy>=1.20.1",
     "myst-parser>=5.1.0",
-    "pyright[nodejs]>=1.1.409",
+    "pyright>=1.1.409",
     "pytest>=9.0.3",
+    "requests>=2.34.2",
     "ruff>=0.15.11",
 ]
+
+[tool.uv]
+exclude-newer = "7 days"
+# pyright は PATH 上の node が見つからないと nodeenv で Node.js を自動取得するため、mise で固定した版以外を使わせないよう除外する
+exclude-dependencies = ["nodeenv"]
+
+# 待機設定の導入で既存環境を巻き戻さないため、確認済みの配布物までを一時的に許可する。
+[tool.uv.exclude-newer-package]
+# certifi 2026.10.23: 2026-10-30 20:37 JST 以降に解除する。
+certifi = "2026-10-23T11:36:16.479Z"
+# Sphinx 9.2.0: 2026-10-28 09:06 JST 以降に解除する。
+sphinx = "2026-10-21T00:05:15.020Z"
+# sphinxcontrib-jsmath 2.0.0: 2026-10-28 03:23 JST 以降に解除する。
+sphinxcontrib-jsmath = "2026-10-20T18:22:05.515Z"
 
 [tool.ruff]
 # 1行の最大文字数
@@ -96,6 +140,8 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
+# 型チェックで前提とするPythonのバージョン (.python-version・ruff・pyrightと揃える)
+python_version = "3.14"
 # Any型を返す関数の戻り値に対して警告する
 warn_return_any = true
 # 型ヒントが付与されていない関数定義をエラーとする

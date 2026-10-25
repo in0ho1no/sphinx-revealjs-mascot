@@ -21,7 +21,7 @@ Copilot が複数の対応ディレクトリから同名スキルを候補表示
 
 ## 権限制御とフック
 
-Claude Code は [.claude/settings.json](../.claude/settings.json)、Copilot は [pre-tool-use.json](../.github/hooks/pre-tool-use.json) と [post-tool-use.json](../.github/hooks/post-tool-use.json) から共通検査を呼び出します。フック起動時には PATH 上の `python` が必要です。
+Claude Code は [.claude/settings.json](../.claude/settings.json)、Copilot は [pre-tool-use.json](../.github/hooks/pre-tool-use.json) と [post-tool-use.json](../.github/hooks/post-tool-use.json) から共通検査を呼び出します。フック起動時には、PATH 上で uv コマンドを実行できる必要があります。  
 Claude のプロジェクト環境変数による実行ガードを維持し、共通の監査ログ出力先は `.github/logs/audit.log` です。必要なら `HOOK_LOG_PATH` で変更できます。
 
 これらのフックは Codex へ自動適用されません。Codex は実行環境の sandbox・承認設定と、共通指示に従って作業します。共通指示の参照はフックと同等の強制制御を保証しません。Codex の個人設定や権限を、リポジトリから上書きする設定は追加していません。
