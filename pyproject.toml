@@ -100,6 +100,8 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
+# 型チェックで前提とするPythonのバージョン (.python-version・ruff・pyrightと揃える)
+python_version = "3.14"
 # Any型を返す関数の戻り値に対して警告する
 warn_return_any = true
 # 型ヒントが付与されていない関数定義をエラーとする

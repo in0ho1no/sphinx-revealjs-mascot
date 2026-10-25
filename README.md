@@ -12,6 +12,7 @@ CSS・JavaScript・画像の自動組み込み、設定値の検証、専用デ�
 ## 開発の開始
 
 [pyproject.toml](pyproject.toml) の Python 要件を満たす環境と uv、[mise](https://mise.jdx.dev/) を用意し、リポジトリルートで実行します。
+手元と CI で使う Python は、[.python-version](.python-version) で 3.14 系に揃えています。
 
 ```sh
 mise trust

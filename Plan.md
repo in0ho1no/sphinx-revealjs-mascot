@@ -190,7 +190,9 @@ JavaScript テストが pytest・CI から実行されず、実行方法も記�
 - [Tests](.github/workflows/tests.yml) は、mise で固定した Node.js と uv を導入し、ruff・mypy・pyright・pytest を実行する。Node.js の新しい版の有無は、PR の内容と無関係なため警告に留める。
 - mise-action v5.2.0 と setup-uv v10.3.0 は、Dependabot の待機日数に合わせ、公開から7日以上経過した最新版をコミット SHA で固定した。
 - [gh-RequiredCI.json](git-setup/gh-RequiredCI.json) の必須チェックに `tests` を加えた。GitHub への反映は利用者が行う。
-- ローカルでは、pytest 全体、node がない場合と別の版が先に見つかる場合の失敗、名前の変更を照合で検出できることを確認した。CI 上の実行と、Linux での pytest 全体の実行は未確認である。
+- ローカルでは、pytest 全体、node がない場合と別の版が先に見つかる場合の失敗、名前の変更を照合で検出できることを確認した。
+- CI では、mise で固定した Node.js 24.22.1 で全ステップが成功し、pytest は `81 passed` だった。nodejs.org からの公開版一覧の取得と比較も成功した。
+- CI の Python が 3.15.1 となり、手元の 3.14.3 と異なっていた。`.python-version` で 3.14 系に固定し、mypy の `python_version` も ruff・pyright と同じ 3.14 にした。
 
 ## 調整・検証・配布設定
 
