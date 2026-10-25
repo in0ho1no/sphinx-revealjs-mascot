@@ -4,9 +4,9 @@
     "preToolUse": [
       {
         "type": "command",
-        "command": "python .github/hooks/entrypoint.py pre",
-        "bash": "python .github/hooks/entrypoint.py pre",
-        "powershell": "python .github\\hooks\\entrypoint.py pre",
+        "command": "uv run --no-project python .github/hooks/entrypoint.py pre",
+        "bash": "uv run --no-project python .github/hooks/entrypoint.py pre",
+        "powershell": "uv run --no-project python .github\\hooks\\entrypoint.py pre",
         "cwd": ".",
         "timeout": 15,
         "timeoutSec": 15

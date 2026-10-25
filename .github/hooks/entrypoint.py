@@ -24,8 +24,11 @@ def find_repo_root(start_dir: Path) -> Path:
     return start_dir.parents[1]
 
 
-def main() -> None:
+def main(*, require_claude_project: bool = False) -> None:
     """Dispatch the requested hook from the repository root."""
+    if require_claude_project and not os.environ.get('CLAUDE_PROJECT_DIR'):
+        return
+
     if len(sys.argv) != 2 or sys.argv[1] not in {'pre', 'post'}:
         print('Usage: entrypoint.py [pre|post]', file=sys.stderr)
         sys.exit(1)
