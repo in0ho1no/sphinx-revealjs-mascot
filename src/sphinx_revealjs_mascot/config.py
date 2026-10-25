@@ -10,6 +10,7 @@ from sphinx.config import Config
 from sphinx.errors import ConfigError
 
 STATES = ('normal', 'blink', 'sleepy', 'surprise')
+DEFAULT_ACTIONS = {'slide': 'jump', 'fragment': 'wink'}
 IMAGE_PATTERNS = ('{state}.png', 'file-name_{state}.png', '{state}_file-name.png')
 CONFIG_DEFAULTS: dict[str, Any] = {
     'revealjs_mascot_image_dir': None,

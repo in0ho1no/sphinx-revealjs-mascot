@@ -11,7 +11,7 @@ from sphinx.application import Sphinx
 from sphinx.util.osutil import relative_uri
 from sphinx.util.typing import ExtensionMetadata
 
-from sphinx_revealjs_mascot.config import CONFIG_DEFAULTS, STATES, Settings, resolve_settings
+from sphinx_revealjs_mascot.config import CONFIG_DEFAULTS, DEFAULT_ACTIONS, STATES, Settings, resolve_settings
 from sphinx_revealjs_mascot.directives import (
     MascotDirective,
     MascotFragment,
@@ -60,6 +60,7 @@ def _page_config(app: Sphinx, pagename: str, templatename: str, context: dict[st
         'position': asdict(settings.position),
         'idleTimeout': settings.idle_timeout,
         'toggleKey': settings.toggle_key,
+        'defaultActions': DEFAULT_ACTIONS,
     }
     body = json.dumps(config, ensure_ascii=True).replace('<', r'\u003c')
     app.add_js_file(None, body=body, type='application/json', id='sphinx-revealjs-mascot-config')
@@ -89,4 +90,4 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.connect('builder-inited', _configure_assets)
     app.connect('html-page-context', _page_config)
     app.connect('build-finished', _copy_images)
-    return {'env_version': 1, 'parallel_read_safe': True, 'parallel_write_safe': True}
+    return {'env_version': 2, 'parallel_read_safe': True, 'parallel_write_safe': True}
