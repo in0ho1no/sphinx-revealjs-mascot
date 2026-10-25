@@ -12,16 +12,16 @@
 
 ## 正本と適用する指示
 
-- 作業規約: [AGENTS.md](AGENTS.md)
-- 動作・設定・既定値・エラー条件: [docs/SPEC.md](docs/SPEC.md)
-- プロジェクトの現状と開始方法: [README.md](README.md)
-- 依存・Python 要件・検証設定: [pyproject.toml](pyproject.toml)
-- 固定バージョン: [uv.lock](uv.lock)
-- 同梱素材の通知と配布手順: [third_party/README.md](third_party/README.md)
-- Python の作成・編集: [.github/instructions/python.instructions.md](.github/instructions/python.instructions.md)
-- テストの作成・編集: [.github/instructions/python-tests.instructions.md](.github/instructions/python-tests.instructions.md)
-- Markdown の作成・編集: [.github/instructions/markdown.instructions.md](.github/instructions/markdown.instructions.md)
-- Python 品質検証: [.agents/skills/sk-python-quality/SKILL.md](.agents/skills/sk-python-quality/SKILL.md)
+- 作業規約: [AGENTS.md](../AGENTS.md)
+- 動作・設定・既定値・エラー条件: [docs/SPEC.md](SPEC.md)
+- プロジェクトの現状と開始方法: [README.md](../README.md)
+- 依存・Python 要件・検証設定: [pyproject.toml](../pyproject.toml)
+- 固定バージョン: [uv.lock](../uv.lock)
+- 同梱素材の通知と配布手順: [third_party/README.md](../third_party/README.md)
+- Python の作成・編集: [.github/instructions/python.instructions.md](../.github/instructions/python.instructions.md)
+- テストの作成・編集: [.github/instructions/python-tests.instructions.md](../.github/instructions/python-tests.instructions.md)
+- Markdown の作成・編集: [.github/instructions/markdown.instructions.md](../.github/instructions/markdown.instructions.md)
+- Python 品質検証: [.agents/skills/sk-python-quality/SKILL.md](../.agents/skills/sk-python-quality/SKILL.md)
 
 本計画には仕様や設定の既定値を複写せず、各正本を参照する。
 
@@ -30,10 +30,10 @@
 - 初回調査時点では拡張本体は未実装だった。`src/main.py` と対応するテストはテンプレートのサンプルである。
 - 実行用依存と Python 品質検証ツールは既存環境に導入されている。
 - `pyproject.toml` には配布用の `[build-system]` がない。
-- [examples/conf.py](examples/conf.py) は拡張の登録を記述済みだが、未実装のためサンプル全体のビルドは未確認である。
-- [examples/slides.md](examples/slides.md) と [examples/fragments.rst](examples/fragments.rst) に専用ディレクティブの利用例がある。
+- [examples/conf.py](../examples/conf.py) は拡張の登録を記述済みだが、未実装のためサンプル全体のビルドは未確認である。
+- [examples/slides.md](../examples/slides.md) と [examples/fragments.rst](../examples/fragments.rst) に専用ディレクティブの利用例がある。
 - `examples/_static/mascot/joubitaki/` の画像4枚を実際に確認した。すべて同じ寸法の透過 PNG で、右向きの表情差分として利用できる。
-- [scripts/collect_licenses.py](scripts/collect_licenses.py) とサンプルの `build-finished` 処理に、通知の検証・コピー機構がある。
+- [scripts/collect_licenses.py](../scripts/collect_licenses.py) とサンプルの `build-finished` 処理に、通知の検証・コピー機構がある。
 - 既存のライセンス検証は `6 bundled components: verified` で成功した。
 - ユーザーが確認用 HTML を直接開き、スライド右下にキャラクターが表示されることを確認した。
 
@@ -163,8 +163,8 @@ JavaScript テストが pytest・CI から実行されず、実行方法も記�
 #### 段階1の結果
 
 - Node.js は `mise.toml` で `major.minor.patch` まで固定した。新しい版の検知には、比較の基準となる固定版が必要なためである。
-- [scripts/check_node_version.py](scripts/check_node_version.py) は、固定版と nodejs.org の公開版一覧を比べる。同じメジャーの新しい版があれば、Task テンプレートの項目に沿った Issue 本文を作る。
-- [Node.js Version](.github/workflows/node-version.yml) は Dependabot と同じ毎週金曜 17:30 (Asia/Tokyo) に実行し、開いている同名の Issue があれば本文を更新する。新しい版がある場合と確認に失敗した場合は、workflow を失敗させる。
+- [scripts/check_node_version.py](../scripts/check_node_version.py) は、固定版と nodejs.org の公開版一覧を比べる。同じメジャーの新しい版があれば、Task テンプレートの項目に沿った Issue 本文を作る。
+- [Node.js Version](../.github/workflows/node-version.yml) は Dependabot と同じ毎週金曜 17:30 (Asia/Tokyo) に実行し、開いている同名の Issue があれば本文を更新する。新しい版がある場合と確認に失敗した場合は、workflow を失敗させる。
 - 定期実行は既定ブランチの `main` に workflow がある場合だけ起動する。公開リポジトリでは、60日間リポジトリの活動がないと定期実行が自動で停止する。活動の定義は公式文書に記載がなく、書き込み権限を持つ利用者のコミットで再開する。
 - Dependabot に uv を追加し、Python 依存の更新も既存と同じ周期・待機日数で PR にする。
 - 公開版一覧の取得はネットワークを使うため、自動テストではファイルから読み込む一覧で比較・本文生成・異常系を検証した。nodejs.org からの実際の取得と、Issue の作成・更新は未確認である。
@@ -183,13 +183,13 @@ JavaScript テストが pytest・CI から実行されず、実行方法も記�
 
 #### 段階3の結果
 
-- [test_mascot_contract.py](src/tests/test_mascot_contract.py) で、既定アクションの明示指定可否、画像状態、CSS の `data-state` セレクター、`mascot.js` に直接書いたアクション名・画像名・既定アクションの種類を Python の定義と照合する。Node.js を使わずに実行できる。
-- [test_mascot_runtime.py](src/tests/test_mascot_runtime.py) は、PATH の `node` が `mise.toml` の固定版と一致することを確認し、Python の定義を環境変数で渡して JavaScript テストを起動する。`node` がない場合や版が異なる場合は、スキップせず失敗にする。
+- [test_mascot_contract.py](../src/tests/test_mascot_contract.py) で、既定アクションの明示指定可否、画像状態、CSS の `data-state` セレクター、`mascot.js` に直接書いたアクション名・画像名・既定アクションの種類を Python の定義と照合する。Node.js を使わずに実行できる。
+- [test_mascot_runtime.py](../src/tests/test_mascot_runtime.py) は、PATH の `node` が `mise.toml` の固定版と一致することを確認し、Python の定義を環境変数で渡して JavaScript テストを起動する。`node` がない場合や版が異なる場合は、スキップせず失敗にする。
 - JavaScript テストから `uv` の呼び出しと静的な照合を外し、実行時の動作の検証に絞った。単独で実行した場合は、pytest からの実行を促して失敗する。
 - JavaScript テストの件数が 0 件でなく、すべて成功したことを TAP 形式の集計で確認する。
-- [Tests](.github/workflows/tests.yml) は、mise で固定した Node.js と uv を導入し、ruff・mypy・pyright・pytest を実行する。Node.js の新しい版の有無は、PR の内容と無関係なため警告に留める。
+- [Tests](../.github/workflows/tests.yml) は、mise で固定した Node.js と uv を導入し、ruff・mypy・pyright・pytest を実行する。Node.js の新しい版の有無は、PR の内容と無関係なため警告に留める。
 - mise-action v5.2.0 と setup-uv v10.3.0 は、Dependabot の待機日数に合わせ、公開から7日以上経過した最新版をコミット SHA で固定した。
-- [gh-RequiredCI.json](git-setup/gh-RequiredCI.json) の必須チェックに `tests` を加えた。GitHub への反映は利用者が行う。
+- [gh-RequiredCI.json](../git-setup/gh-RequiredCI.json) の必須チェックに `tests` を加えた。GitHub への反映は利用者が行う。
 - ローカルでは、pytest 全体、node がない場合と別の版が先に見つかる場合の失敗、名前の変更を照合で検出できることを確認した。
 - CI では、mise で固定した Node.js 24.22.1 で全ステップが成功し、pytest は `81 passed` だった。nodejs.org からの公開版一覧の取得と比較も成功した。
 - CI の Python が 3.15.1 となり、手元の 3.14.3 と異なっていた。`.python-version` で 3.14 系に固定し、mypy の `python_version` も ruff・pyright と同じ 3.14 にした。
@@ -266,6 +266,6 @@ uv add --dev hatchling
 
 最小構成の実装と `examples/conf.py` の設定変更は承認済みである。
 ブラウザでの実表示確認はユーザーが担当するため、Chrome 操作のアクセス承認は求めない。
-[AGENTS.md](AGENTS.md) の、大きな変更と設定ファイル変更に関する事前確認の規定は引き続き適用する。
+[AGENTS.md](../AGENTS.md) の、大きな変更と設定ファイル変更に関する事前確認の規定は引き続き適用する。
 
 その後も、依存追加、破壊的変更、複数ファイルにまたがる大規模リファクタ、未承認の設定・開発フロー変更が必要になった場合は、実施前に確認する。
