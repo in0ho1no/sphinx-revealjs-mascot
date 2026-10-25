@@ -23,6 +23,7 @@ uv run python src/main.py
 pyright は、[mise.toml](mise.toml) で固定した Node.js を PATH から使います。
 mise の shims フォルダ (Windows の既定は `%LOCALAPPDATA%\mise\shims`) を PATH に追加するか、シェルで `mise activate` を有効にしてください。
 管理外の Node.js を使わないよう、pyright が Node.js を自動取得する nodeenv は依存から除外しています。
+PATH に `node` がない場合、pyright は `nodeenv failed` で失敗します。表示される `pyright[nodejs]` の導入案内には従わず、PATH を確認してください。
 以前に作られた `~/.cache/pyright-python/nodeenv` が残っていると、PATH に `node` がないときにその Node.js が使われるため、削除してください。
 
 Python の規約・品質検証は [共通指示](AGENTS.md) から参照できます。

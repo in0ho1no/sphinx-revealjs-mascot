@@ -157,7 +157,7 @@ JavaScript テストが pytest・CI から実行されず、実行方法も記�
 このため Node.js は mise で版を固定し、更新は自作の定期 workflow で確認する。次の3段階で進める。
 
 - [x] 段階1: 依存の更新監視を追加する。`mise.toml` で Node.js を固定し、定期 workflow で同じメジャーの新しい版を確認する。Dependabot に uv を追加する。
-- [ ] 段階2: pyright が使う Node.js を mise で固定した版へ寄せる。
+- [x] 段階2: pyright が使う Node.js を mise で固定した版へ寄せる。
 - [ ] 段階3: Python・JavaScript・CSS の名前の対応を pytest で確認し、pytest から JavaScript テストを起動する。CI で品質検証を実行し、必須チェックに加える。
 
 #### 段階1の結果
@@ -169,15 +169,17 @@ JavaScript テストが pytest・CI から実行されず、実行方法も記�
 - Dependabot に uv を追加し、Python 依存の更新も既存と同じ周期・待機日数で PR にする。
 - 公開版一覧の取得はネットワークを使うため、自動テストではファイルから読み込む一覧で比較・本文生成・異常系を検証した。nodejs.org からの実際の取得と、Issue の作成・更新は未確認である。
 
-#### 段階2の進捗
+#### 段階2の結果
 
 - pyright-python は、`nodejs_wheel`、PATH 上の `node`、nodeenv による自動取得の順で Node.js を選ぶ。nodeenv は既存の取得先が残っていれば、それを使い続ける。
 - `pyright[nodejs]` を `pyright` に変え、`[tool.uv]` の `exclude-dependencies` で nodeenv を除外した。PATH に `node` がない場合に、管理外の Node.js を取得・使用させないためである。
-- `uv lock --dry-run --offline` で、nodeenv と nodejs-wheel-binaries だけが除かれることを確認した。`uv.lock` の更新と環境の同期は未実施で、利用者が行う。
+- 利用者が `uv.lock` を更新し、環境を同期した。nodeenv と nodejs-wheel-binaries だけが除かれ、環境からも削除されたことを確認した。
 - 現環境で `nodejs_wheel` を無効にし、mise の Node.js を PATH に置くと、pyright がその Node.js を選び、エラーなしで完了することを確認した。検証には導入済みの 26.4.0 を使った。
 - PATH に `node` がない場合は、`~/.cache/pyright-python/nodeenv` に残る Node.js 26.2.0 が選ばれることを確認した。README に削除を記載した。
 - README の開始手順、仕様書の Node.js の前提、`sk-python-quality` の実行環境を更新した。
-- 利用者の準備後に、固定版 24.22.1 での pyright の実行と、PATH に `node` がない場合の失敗を確認する。
+- mise の shims を PATH に置くと、リポジトリ内の `node` は固定版 24.22.1 になり、pyright もこの版で実行してエラーなしで完了した。
+- PATH に `node` がなく、nodeenv の取得先も残っていない場合、pyright は `nodeenv failed` で失敗し、Node.js を取得しないことを確認した。表示される `pyright[nodejs]` の導入案内に従わないよう、README と `sk-python-quality` に記載した。
+- 起動中のアプリや端末は、PATH の変更を再起動まで反映しない。検証では shims を PATH の先頭に加えて確認した。
 
 ## 調整・検証・配布設定
 
