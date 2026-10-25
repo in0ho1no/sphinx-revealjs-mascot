@@ -1,16 +1,16 @@
 """mise.toml で固定した Node.js が、同じメジャーの最新版か確認する。"""
 
-# GitHub Actions では uv を使わず標準の python3 で実行するため、3.12 で動く構文と標準ライブラリに留める。
-
 import argparse
 import json
 import re
 import sys
 import tomllib
 from dataclasses import dataclass
-from http.client import HTTPException, HTTPSConnection
 from pathlib import Path
 from typing import Any, cast
+
+import requests
+from requests.exceptions import RequestException
 
 ROOT = Path(__file__).resolve().parents[1]
 _VERSION = re.compile(r'v?(\d+)\.(\d+)\.(\d+)')
@@ -116,16 +116,13 @@ def load_index(index_file: Path | None) -> Index:
     """公開版の一覧を、指定されたファイルまたは nodejs.org から読み込む。"""
     if index_file is not None:
         return cast(Index, json.loads(index_file.read_text(encoding='utf-8')))
-    # 汎用 URL の処理とリダイレクト追従は、公式の取得先以外を許すため使わない。
-    connection = HTTPSConnection('nodejs.org', timeout=30)
-    try:
-        connection.request('GET', '/dist/index.json')
-        with connection.getresponse() as response:
-            if response.status != 200:
-                raise ValueError(f'nodejs.org の公開版一覧を取得できません: HTTP {response.status}')
-            return cast(Index, json.load(response))
-    finally:
-        connection.close()
+    with requests.Session() as session:
+        # 環境由来の認証情報や CA・プロキシ設定で、取得時の前提を変えない。
+        session.trust_env = False
+        with session.get('https://nodejs.org/dist/index.json', timeout=30, allow_redirects=False, verify=True, stream=True) as response:
+            if response.status_code != 200:
+                raise ValueError(f'nodejs.org の公開版一覧を取得できません: HTTP {response.status_code}')
+            return cast(Index, response.json())
 
 
 def main() -> int:
@@ -138,7 +135,7 @@ def main() -> int:
     try:
         pinned = pinned_version(arguments.config)
         releases = newer_releases(pinned, load_index(arguments.index_file))
-    except (OSError, HTTPException, ValueError, KeyError, TypeError) as error:
+    except (OSError, RequestException, ValueError, KeyError, TypeError) as error:
         print(f'Node.js の版を確認できません: {error}', file=sys.stderr)
         return 2
     if not releases:

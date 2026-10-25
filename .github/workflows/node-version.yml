@@ -23,11 +23,15 @@ jobs:
         with:
           # 定期実行は既定ブランチで起動するため、Dependabot と同じ開発ブランチの固定版を確認する。
           ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Install dependencies
+        run: uv sync --locked
       - name: Compare pinned Node.js with the latest release
         id: check
         run: |
           set +e
-          python3 scripts/check_node_version.py --issue-body "$RUNNER_TEMP/node-version.md"
+          uv run --frozen --no-sync python scripts/check_node_version.py --issue-body "$RUNNER_TEMP/node-version.md"
           echo "status=$?" >> "$GITHUB_OUTPUT"
       - name: Open or update the update issue
         if: steps.check.outputs.status == '1'

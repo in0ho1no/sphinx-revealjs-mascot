@@ -7,7 +7,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-10-18T14:11:36.7483703Z"
+exclude-newer = "2026-10-18T14:42:51.3163527Z"
 exclude-newer-span = "P7D"
 
 [options.exclude-newer-package]
@@ -732,6 +732,7 @@ dev = [
     { name = "myst-parser" },
     { name = "pyright" },
     { name = "pytest" },
+    { name = "requests" },
     { name = "ruff" },
 ]
 
@@ -749,6 +750,7 @@ dev = [
     { name = "myst-parser", specifier = ">=5.1.0" },
     { name = "pyright", specifier = ">=1.1.409" },
     { name = "pytest", specifier = ">=9.0.3" },
+    { name = "requests", specifier = ">=2.34.2" },
     { name = "ruff", specifier = ">=0.15.11" },
 ]
 
