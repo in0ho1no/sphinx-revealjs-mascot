@@ -93,7 +93,7 @@ F-11・F-12・F-15 を対象イベントとし、いずれも発生時に経過�
 
 MyST Markdown と reStructuredText の実際の記述例は [サンプル](#samples) に集約する。
 
-### アクション一覧（初期案）
+### アクション一覧
 
 初期版で扱うアクションは次のとおりとする。
 
@@ -203,8 +203,8 @@ MyST Markdown と reStructuredText の実際の記述例は [サンプル](#samp
 
 ### 標準画像の制作・配布
 
-後工程で画像生成 AI を用いて、汎用的なオリジナルキャラクターを制作する。
-既存キャラクター・作品・ロゴを参照せず、公開前に類似している点がないか確認する。
+標準キャラクターは画像生成 AI を用いて制作し、拡張に同梱している。
+画像を追加・差し替える場合は、既存キャラクター・作品・ロゴを参照せず、公開前に類似している点がないか確認する。
 
 同梱画像が AI 生成であることと、保有する権利の範囲でリポジトリの [MIT License](../LICENSE) を適用することを明記する。
 この記載により第三者の権利を許諾できるわけではなく、画像の著作物性や権利非侵害を保証するものではない。
@@ -229,10 +229,10 @@ transform の競合を避けるため、位置決めと各モーションの担�
 キャラクター要素は JavaScript で起動時に生成し、`document.body` に追加する。
 文字・記号の要素は `.facing` の外側に置く。
 
-### ディレクトリ構成（案）
+### ディレクトリ構成
 
-本 Workspace の `src/` を使ったパッケージ配置を想定する。
-実装時の配置案と利用サンプルの関係は次のとおりとする。
+拡張本体は `src/` に配置し、標準画像と通知は原本から配布物へ自動で取り込む。
+主なソースと利用サンプルの関係は次のとおりである。
 
 ```text
 project/
@@ -240,11 +240,15 @@ project/
 │  └─ SPEC.md
 ├─ examples/
 │  ├─ conf.py
+│  ├─ _static/mascot/joubitaki/ # 標準画像の原本
 │  ├─ slides.md
-│  └─ fragments.rst
+│  ├─ fragments.rst
+│  ├─ positions.md
+│  └─ minimal/
+├─ third_party/                # 第三者ライセンス通知の原本
 └─ src/
-   ├─ sphinx_revealjs_mascot/   # 実装時に作成する拡張パッケージ
-   │  └─ static/               # 拡張が配布する CSS・JavaScript・標準画像
+   ├─ sphinx_revealjs_mascot/   # 拡張パッケージ
+   │  └─ static/               # 拡張が配布する CSS・JavaScript
    └─ tests/
 ```
 
@@ -273,7 +277,7 @@ project/
 通常のスクリプトとして JavaScript を読み込み、表示中の設定取得に `fetch()` を使わない。
 外部ファイルを読み込む ES modules に依存しない。
 
-reveal.js はファイルから直接実行できる形式を提供しているが、本拡張と sphinx-revealjs の組み合わせでの確認は必要となる。
+本拡張と sphinx-revealjs を組み合わせた HTML の直接表示は Chrome・Edge で確認している。確認範囲は [実装・検証の記録](Plan.md) を参照する。
 技術的な参照先は [reveal.js の初期化](https://revealjs.com/initialization/) と [MDN の JavaScript 読み込み方法](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/What_is_JavaScript) とする。
 
 ## 非機能要件
@@ -291,15 +295,14 @@ reveal.js はファイルから直接実行できる形式を提供している�
 | N-09 | 成果物の持ち運び | HTML・画像・CSS・JavaScript を含むビルド出力フォルダ一式で扱う。HTML 単体への全データ埋め込みは要求しない |
 | N-10 | 第三者ライセンス | ライセンス原文・表示の保持と配布は [ライセンスの扱い](../third_party/README.md) に従う |
 
-## 未確定事項
+## 検証範囲と初期版の対象外
 
-### 実装時に確認・調整する項目
+### 検証範囲
 
-- 導入時点の安定版から Sphinx・sphinx-revealjs・MyST-Parser の組み合わせを1つ選び、検証する。選定結果は `pyproject.toml` と `uv.lock` に反映し、本書にバージョンを転記しない。
-- 選んだ版で CSS・JavaScript・画像の自動組み込みと初期化タイミングを確認する。参照先は sphinx-revealjs の [Setup](https://sphinx-revealjs.readthedocs.io/en/stable/setup/) と [Configurations](https://sphinx-revealjs.readthedocs.io/en/stable/configurations/) とする。
-- 専用ディレクティブを MyST Markdown と reStructuredText の双方でビルドし、対象スライドへの設定と fragment のまとまりを確認する。
-- 標準画像の表示幅・余白・モーションは Chrome・Edge で確認し、初版の既定値を確定した。確認範囲と残る検証は [実装計画](Plan.md) を参照する。
-- 任意座標の端付近での表示と、実際の投影・画面共有での見え方を確認する。
+Sphinx・sphinx-revealjs・MyST-Parser の組み合わせは `pyproject.toml` と `uv.lock` に反映している。
+CSS・JavaScript・画像の自動組み込み、初期化の準備待ち、MyST Markdown と reStructuredText のディレクティブ出力は自動テストの対象である。
+標準画像の表示幅・余白・モーションは Chrome・Edge で確認し、初版の既定値を確定している。
+ブラウザでの実操作や投影・画面共有など、残る確認範囲は [実装・検証の記録](Plan.md) に集約する。
 
 ### 初期版に含めない項目
 
@@ -314,28 +317,22 @@ reveal.js はファイルから直接実行できる形式を提供している�
 | Safari の検証 | 対象外 |
 | スマートフォン対応 | 当面予定しない |
 
-## 開発の進め方（案）
-
-1. 本仕様とサンプルソースを整える。
-2. 必要な依存追加とパッケージ設定の変更を確認したうえで、拡張を実装する。
-3. ダミー画像で機能要件を確認する。
-4. 標準画像を制作・同梱し、未確定の表示・モーション値を調整する。
-5. サンプルをビルドし、非機能要件を含めたブラウザ確認と投影・共有確認を行う。
-
-### サンプル <a id="samples"></a>
+## サンプル <a id="samples"></a>
 
 | ファイル | 担当する利用例 |
 | --- | --- |
 | [examples/conf.py](../examples/conf.py) | 両形式で共用する最小の Sphinx 設定 |
 | [examples/slides.md](../examples/slides.md) | MyST Markdown。スライドのアクション・位置指定と既定位置への復帰 |
 | [examples/fragments.rst](../examples/fragments.rst) | reStructuredText。fragment のアクション指定とグループ表示 |
+| [examples/positions.md](../examples/positions.md) | 四隅・任意座標の位置とモーション |
+| [examples/minimal/index.rst](../examples/minimal/index.rst) | 専用ディレクティブを使わない最小構成 |
 
 サンプルの `conf.py` は形式間で共用し、拡張の既定値をそのまま使用する。
 
-次は拡張本体と必要な依存が導入された後に使う予定のビルドコマンドであり、現段階のビルド成功を示すものではない。
+開発環境の準備後、リポジトリルートからサンプルをビルドする。
 
 ```shell
-uv run sphinx-build -b revealjs examples examples/_build/revealjs
+uv run --frozen --no-sync --offline sphinx-build -W -b revealjs examples examples/_build/revealjs
 ```
 
 出力内の `slides.html` と `fragments.html` を、それぞれ対象ブラウザで直接開いて確認する。

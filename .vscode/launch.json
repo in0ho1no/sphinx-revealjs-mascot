@@ -2,10 +2,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python デバッガー: main",
+            "name": "Python デバッガー: サンプルのビルド",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\src\\main.py",
+            "module": "sphinx",
+            "args": ["-W", "-b", "revealjs", "examples", "examples/_build/revealjs"],
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
         }
     ]
