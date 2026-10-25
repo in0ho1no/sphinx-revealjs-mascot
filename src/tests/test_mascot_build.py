@@ -3,12 +3,13 @@
 import json
 import subprocess
 import sys
+from dataclasses import asdict
 from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
 
-from sphinx_revealjs_mascot.config import DEFAULT_ACTIONS, STATES
+from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, STATES
 
 _REPOSITORY = Path(__file__).resolve().parents[2]
 
@@ -78,6 +79,7 @@ def test_minimal_build_includes_local_assets_and_notices(tmp_path: Path, builder
             assert (page.parent / url.split('?', 1)[0]).is_file(), url
         config = json.loads(resources.config)
         assert config['defaultActions'] == DEFAULT_ACTIONS
+        assert config['actions'] == {name: asdict(definition) for name, definition in ACTIONS.items()}
         assert set(config['images']) == set(STATES)
         for state, url in config['images'].items():
             original = _REPOSITORY / 'examples/_static/mascot/joubitaki' / f'{state}.png'

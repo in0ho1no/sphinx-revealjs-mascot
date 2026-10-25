@@ -1,14 +1,6 @@
 (() => {
     "use strict";
 
-    const ACTIONS = {
-        idle: { image: "normal" },
-        jump: { image: "normal", duration: 600 },
-        wink: { image: "blink", duration: 180 },
-        surprise: { image: "surprise", duration: 700 },
-        doze: { image: "sleepy" },
-        wake: { image: "surprise", duration: 500 },
-    };
     const BLINK = { min: 2200, max: 6000, duration: 140 };
     const MAX_TIMEOUT = 2147483647;
 
@@ -99,9 +91,10 @@
         }
 
         function runAction(action) {
+            if (!Object.hasOwn(config.actions, action)) return;
+            const definition = config.actions[action];
             for (const name of ["blink", "blinkEnd", "reaction"]) cancel(name);
             state = action;
-            const definition = ACTIONS[action];
             // 同じ CSS アニメーションも再実行するため、状態の代入だけでは済ませない。
             chara.dataset.state = "idle";
             void reaction.offsetWidth;

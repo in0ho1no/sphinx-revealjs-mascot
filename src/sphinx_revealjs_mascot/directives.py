@@ -11,9 +11,9 @@ from sphinx.util.docutils import SphinxDirective
 from sphinx.writers.html5 import HTML5Translator
 from sphinx_revealjs.nodes import revealjs_section
 
-from sphinx_revealjs_mascot.config import parse_position
+from sphinx_revealjs_mascot.config import ACTIONS, parse_position
 
-_EXPLICIT_ACTIONS = ('idle', 'jump', 'wink', 'surprise')
+_EXPLICIT_ACTIONS = tuple(name for name, definition in ACTIONS.items() if definition.explicit)
 
 
 def _action(value: str) -> str:

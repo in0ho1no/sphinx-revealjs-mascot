@@ -1,10 +1,24 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const test = require("node:test");
+
+const repository = path.resolve(__dirname, "../..");
+const contract = JSON.parse(execFileSync("uv", [
+    "--cache-dir", path.join(repository, ".uv_cache"), "run", "--frozen", "--no-sync", "--offline",
+    "python", "-X", "utf8", "-c", [
+        "import sys; sys.path.insert(0, 'src')",
+        "import json",
+        "from dataclasses import asdict",
+        "from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, STATES",
+        "from sphinx_revealjs_mascot.directives import _EXPLICIT_ACTIONS",
+        "print(json.dumps({'actions': {name: asdict(value) for name, value in ACTIONS.items()}, 'defaults': DEFAULT_ACTIONS, 'states': STATES, 'explicit': _EXPLICIT_ACTIONS}))",
+    ].join("\n"),
+], { cwd: repository, encoding: "utf8" }));
 
 const source = fs.readFileSync(
     path.join(__dirname, "../sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js"),
@@ -77,10 +91,11 @@ function fixture({ ready = true, loading = false, initialSlide = null, overrides
     const config = {
         width: 12.5,
         position: { anchor: "bottom-right", x: 100, y: 100, facing: -1 },
-        images: Object.fromEntries(["normal", "blink", "sleepy", "surprise"].map((state) => [state, `_static/images/${state}.png`])),
+        images: Object.fromEntries(contract.states.map((state) => [state, `_static/images/${state}.png`])),
         idleTimeout: 10,
         toggleKey: "x",
-        defaultActions: { slide: "jump", fragment: "wink" },
+        defaultActions: contract.defaults,
+        actions: contract.actions,
         ...overrides,
     };
     elements.set("sphinx-revealjs-mascot-config", { textContent: JSON.stringify(config) });
@@ -436,4 +451,50 @@ test("ブラウザの上限を超える無操作時間を安全なタイマー�
     const state = fixture({ overrides: { idleTimeout: 1e20 } });
     assert.equal(currentState(state), "idle");
     assert.ok([...state.clock.pending.values()].some((job) => job.time === 2147483647));
+});
+
+test("Python のアクション定義と明示指定・既定アクション・CSS の状態名が一致する", () => {
+    const names = Object.keys(contract.actions);
+    assert.deepEqual(contract.explicit, names.filter((name) => contract.actions[name].explicit));
+    for (const name of Object.values(contract.defaults)) {
+        assert.ok(contract.explicit.includes(name));
+    }
+    for (const [name, definition] of Object.entries(contract.actions)) {
+        assert.ok(contract.states.includes(definition.image), name);
+        assert.ok(Number.isFinite(definition.duration) && definition.duration >= 0, name);
+    }
+    const css = fs.readFileSync(path.join(repository, "src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.css"), "utf8");
+    const cssStates = [...new Set([...css.matchAll(/\[data-state="([^"]+)"\]/g)].map((match) => match[1]))].sort();
+    assert.deepEqual(cssStates, names.filter((name) => contract.actions[name].motion).sort());
+    for (const action of contract.explicit) {
+        const state = fixture();
+        state.emit("fragmentshown", { fragment: slide(null, { action }) });
+        assert.equal(currentState(state), action);
+        assert.equal(currentImage(state), `_static/images/${contract.actions[action].image}.png`);
+    }
+});
+
+test("不正なアクションでも待機中のまばたきタイマーを壊さない", () => {
+    const state = fixture();
+    const blinkTimer = state.clock.next()[0];
+    for (const action of ["unknown", "constructor", "__proto__"]) {
+        state.emit("fragmentshown", { fragment: slide(null, { action }) });
+        assert.equal(currentState(state), "idle");
+        assert.equal(state.clock.next()[0], blinkTimer);
+    }
+    state.clock.advanceNext();
+    assert.match(currentImage(state), /blink\.png$/);
+    state.clock.advanceNext();
+    assert.match(currentImage(state), /normal\.png$/);
+});
+
+test("不正なアクションが来ても進行中のリアクションと完了処理を継続する", () => {
+    const state = fixture();
+    state.emit("fragmentshown", { fragment: slide(null, { action: "surprise" }) });
+    const completion = state.clock.next()[0];
+    state.emit("fragmentshown", { fragment: slide(null, { action: "unknown" }) });
+    assert.equal(currentState(state), "surprise");
+    assert.equal(state.clock.next()[0], completion);
+    state.clock.advance(1000);
+    assert.equal(currentState(state), "idle");
 });

@@ -10,6 +10,26 @@ from sphinx.config import Config
 from sphinx.errors import ConfigError
 
 STATES = ('normal', 'blink', 'sleepy', 'surprise')
+
+
+@dataclass(frozen=True)
+class Action:
+    """状態画像・継続時間（ミリ秒）・指定可否・CSS モーションの有無を定義する。"""
+
+    image: str
+    duration: int = 0
+    explicit: bool = True
+    motion: bool = False
+
+
+ACTIONS = {
+    'idle': Action('normal'),
+    'jump': Action('normal', duration=600, motion=True),
+    'wink': Action('blink', duration=180),
+    'surprise': Action('surprise', duration=700, motion=True),
+    'doze': Action('sleepy', explicit=False, motion=True),
+    'wake': Action('surprise', duration=500, explicit=False, motion=True),
+}
 DEFAULT_ACTIONS = {'slide': 'jump', 'fragment': 'wink'}
 IMAGE_PATTERNS = ('{state}.png', 'file-name_{state}.png', '{state}_file-name.png')
 CONFIG_DEFAULTS: dict[str, Any] = {
