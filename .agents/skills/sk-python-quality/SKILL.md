@@ -32,6 +32,8 @@ ruff・mypy・pyrightを使ってPythonコードを静的解析し、問題点�
 
 ツールが見つからない場合は `uv sync --locked` による環境構築状況を確認し、未実行として報告する。依存追加は [共通指示](../../../AGENTS.md) に従う。
 
+pyright は mise で固定した Node.js を PATH から使う。PATH に `node` がないと `nodeenv failed` で失敗する。このとき表示される `pyright[nodejs]` の導入案内には従わず、[README](../../../README.md) の開発の開始に沿って mise の準備状況を確認し、未実行として報告する。
+
 ## 実行手順
 
 ### ruffでスタイル・バグ検出

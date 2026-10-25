@@ -19,7 +19,7 @@ sphinx-revealjs で作成したスライドに組み込める Sphinx 拡張と�
 | 記述形式 | MyST-Parser による Markdown と reStructuredText |
 | 開発環境 | Python / uv。具体的な要件は冒頭の正本を参照 |
 | キャラクター実装 | 素の HTML / CSS / JavaScript。追加の JavaScript ライブラリを使わない |
-| Node.js / npm | 拡張のビルド・利用のためには要求しない。既存の開発ツールの要件は変更しない |
+| Node.js / npm | 拡張のビルド・利用のためには要求しない。開発ツールの実行には `mise.toml` で固定した Node.js を使う |
 
 ## 機能要件
 

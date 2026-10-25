@@ -14,10 +14,14 @@ dependencies = [
 dev = [
     "mypy>=1.20.1",
     "myst-parser>=5.1.0",
-    "pyright[nodejs]>=1.1.409",
+    "pyright>=1.1.409",
     "pytest>=9.0.3",
     "ruff>=0.15.11",
 ]
+
+[tool.uv]
+# pyright は PATH 上の node が見つからないと nodeenv で Node.js を自動取得するため、mise で固定した版以外を使わせないよう除外する
+exclude-dependencies = ["nodeenv"]
 
 [tool.ruff]
 # 1行の最大文字数

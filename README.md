@@ -11,15 +11,49 @@ CSS・JavaScript・画像の自動組み込み、設定値の検証、専用デ�
 
 ## 開発の開始
 
-[pyproject.toml](pyproject.toml) の Python 要件を満たす環境と uv を用意し、リポジトリルートで実行します。
+[pyproject.toml](pyproject.toml) の Python 要件を満たす環境と uv、[mise](https://mise.jdx.dev/) を用意し、リポジトリルートで実行します。
 
 ```sh
+mise trust
+mise install
 uv sync --locked
 uv run python src/main.py
 ```
 
+pyright と pytest は、[mise.toml](mise.toml) で固定した Node.js を PATH から使います。
+mise の shims フォルダ (Windows の既定は `%LOCALAPPDATA%\mise\shims`) を PATH に追加するか、シェルで `mise activate` を有効にしてください。
+管理外の Node.js を使わないよう、pyright が Node.js を自動取得する nodeenv は依存から除外しています。
+PATH に `node` がない場合、pyright は `nodeenv failed` で失敗します。表示される `pyright[nodejs]` の導入案内には従わず、PATH を確認してください。
+以前に作られた `~/.cache/pyright-python/nodeenv` が残っていると、PATH に `node` がないときにその Node.js が使われるため、削除してください。
+
 Python の規約・品質検証は [共通指示](AGENTS.md) から参照できます。
 AI 設定の配置と各ツールでの確認方法は [AI 開発環境](docs/ai-environment.md) を参照してください。
+
+## テストと品質検証
+
+リポジトリルートで実行します。
+
+```sh
+uv run pytest
+```
+
+pytest は、ブラウザ用スクリプトの状態遷移テスト [test_mascot_runtime.cjs](src/tests/test_mascot_runtime.cjs) も、固定した Node.js で実行します。
+PATH に `node` がない場合や、`node` の版が `mise.toml` と異なる場合は、テストを失敗にします。
+静的解析の手順は [sk-python-quality](.agents/skills/sk-python-quality/SKILL.md) を参照してください。
+
+pull request と `develop` への push では、[Tests](.github/workflows/tests.yml) が依存を同期し、ruff・mypy・pyright・pytest を実行します。
+`tests` は `develop` の必須チェックです。必須チェックの設定は [gh-RequiredCI.json](git-setup/gh-RequiredCI.json) を正本とし、[gh-enable-push-protection-win.bat](git-setup/gh-enable-push-protection-win.bat) で GitHub に反映します。
+
+## 依存の更新監視
+
+依存の更新漏れを防ぐため、毎週金曜 17:30 (Asia/Tokyo) に次の確認を行います。
+
+- Dependabot が GitHub Actions・Docker イメージ・Python 依存 (uv) の更新を `develop` 向けの PR にします。
+- [Node.js Version](.github/workflows/node-version.yml) が [mise.toml](mise.toml) で固定した Node.js を同じメジャーの最新版と比べ、新しい版があれば Issue を作成・更新します。
+
+定期実行は既定ブランチの `main` に workflow がある場合だけ起動し、`develop` の `mise.toml` を確認します。
+手動実行では、選んだブランチの `mise.toml` を確認します。
+Tests でも同じ確認を行い、新しい版があれば失敗にせず警告を表示します。
 
 ## 最小構成のビルド
 

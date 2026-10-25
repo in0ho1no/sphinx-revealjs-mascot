@@ -1,0 +1,48 @@
+name: Node.js Version
+
+on:
+  schedule:
+    # Dependabot と同じ毎週金曜 17:30 (Asia/Tokyo)。cron は UTC で指定する。
+    - cron: '30 8 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: node-version
+  cancel-in-progress: false
+
+jobs:
+  node-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # 定期実行は既定ブランチで起動するため、Dependabot と同じ開発ブランチの固定版を確認する。
+          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
+      - name: Compare pinned Node.js with the latest release
+        id: check
+        run: |
+          set +e
+          python3 scripts/check_node_version.py --issue-body "$RUNNER_TEMP/node-version.md"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+      - name: Open or update the update issue
+        if: steps.check.outputs.status == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: mise で固定した Node.js の更新
+        run: |
+          set -euo pipefail
+          number=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number,title \
+            --jq 'map(select(.title == $ENV.TITLE)) | first | .number // empty')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file "$RUNNER_TEMP/node-version.md"
+          else
+            gh issue create --title "$TITLE" --body-file "$RUNNER_TEMP/node-version.md" --label task
+          fi
+      - name: Fail when Node.js is outdated or unchecked
+        if: steps.check.outputs.status != '0'
+        run: exit 1
