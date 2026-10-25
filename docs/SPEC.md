@@ -260,9 +260,12 @@ project/
 | `revealjs_mascot_image_dir` | 画像フォルダ。相対パスは `conf.py` の所在を基準に解決 | `None`。標準画像を使用 |
 | `revealjs_mascot_image_pattern` | [ファイル名の指定と検証](#image-filename-validation) で定義した命名形式 | `'{state}.png'` |
 | `revealjs_mascot_position` | [表示位置とサイズ](#position-and-size) で定義した位置を文字列で指定 | `'bottom-right'` |
-| `revealjs_mascot_width` | 画面幅に対する割合を数値で指定。0より大きく100以下 | 実挙動確認で決定 |
+| `revealjs_mascot_width` | 画面幅に対する割合を数値で指定。0より大きく100以下 | [config.py](../src/sphinx_revealjs_mascot/config.py) の `CONFIG_DEFAULTS` を参照（初版確定） |
 | `revealjs_mascot_idle_timeout` | ウトウトに入るまでの秒数。正の数値 | `45` |
 | `revealjs_mascot_toggle_key` | 表示切り替えに使う単一の文字キー | `'m'`（M キー） |
+
+標準画像で Chrome・Edge の表示幅・余白・モーションを確認し、現在の値を初版の既定値とする。
+表示幅は上記の `CONFIG_DEFAULTS`、モーションの寸法・周期とアクションの長さは同じファイルの `MOTION`・`ACTIONS`、まばたきは [mascot.js](../src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js) の `BLINK` を正本とし、細かな値を本書へ転記しない。
 
 ### ブラウザへの組み込み
 
@@ -295,7 +298,7 @@ reveal.js はファイルから直接実行できる形式を提供している�
 - 導入時点の安定版から Sphinx・sphinx-revealjs・MyST-Parser の組み合わせを1つ選び、検証する。選定結果は `pyproject.toml` と `uv.lock` に反映し、本書にバージョンを転記しない。
 - 選んだ版で CSS・JavaScript・画像の自動組み込みと初期化タイミングを確認する。参照先は sphinx-revealjs の [Setup](https://sphinx-revealjs.readthedocs.io/en/stable/setup/) と [Configurations](https://sphinx-revealjs.readthedocs.io/en/stable/configurations/) とする。
 - 専用ディレクティブを MyST Markdown と reStructuredText の双方でビルドし、対象スライドへの設定と fragment のまとまりを確認する。
-- 標準画像で、表示幅の既定値・定型位置の余白・揺れや呼吸の周期と振れ幅・まばたきの間隔と長さ・リアクションの長さを調整する。
+- 標準画像の表示幅・余白・モーションは Chrome・Edge で確認し、初版の既定値を確定した。確認範囲と残る検証は [実装計画](Plan.md) を参照する。
 - 任意座標の端付近での表示と、実際の投影・画面共有での見え方を確認する。
 
 ### 初期版に含めない項目
