@@ -169,6 +169,16 @@ JavaScript テストが pytest・CI から実行されず、実行方法も記�
 - Dependabot に uv を追加し、Python 依存の更新も既存と同じ周期・待機日数で PR にする。
 - 公開版一覧の取得はネットワークを使うため、自動テストではファイルから読み込む一覧で比較・本文生成・異常系を検証した。nodejs.org からの実際の取得と、Issue の作成・更新は未確認である。
 
+#### 段階2の進捗
+
+- pyright-python は、`nodejs_wheel`、PATH 上の `node`、nodeenv による自動取得の順で Node.js を選ぶ。nodeenv は既存の取得先が残っていれば、それを使い続ける。
+- `pyright[nodejs]` を `pyright` に変え、`[tool.uv]` の `exclude-dependencies` で nodeenv を除外した。PATH に `node` がない場合に、管理外の Node.js を取得・使用させないためである。
+- `uv lock --dry-run --offline` で、nodeenv と nodejs-wheel-binaries だけが除かれることを確認した。`uv.lock` の更新と環境の同期は未実施で、利用者が行う。
+- 現環境で `nodejs_wheel` を無効にし、mise の Node.js を PATH に置くと、pyright がその Node.js を選び、エラーなしで完了することを確認した。検証には導入済みの 26.4.0 を使った。
+- PATH に `node` がない場合は、`~/.cache/pyright-python/nodeenv` に残る Node.js 26.2.0 が選ばれることを確認した。README に削除を記載した。
+- README の開始手順、仕様書の Node.js の前提、`sk-python-quality` の実行環境を更新した。
+- 利用者の準備後に、固定版 24.22.1 での pyright の実行と、PATH に `node` がない場合の失敗を確認する。
+
 ## 調整・検証・配布設定
 
 - [ ] 標準画像で表示幅・余白・モーションを調整し、決定した既定値を仕様書に反映する。

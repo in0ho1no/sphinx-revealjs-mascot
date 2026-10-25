@@ -11,12 +11,19 @@ CSS・JavaScript・画像の自動組み込み、設定値の検証、専用デ�
 
 ## 開発の開始
 
-[pyproject.toml](pyproject.toml) の Python 要件を満たす環境と uv を用意し、リポジトリルートで実行します。
+[pyproject.toml](pyproject.toml) の Python 要件を満たす環境と uv、[mise](https://mise.jdx.dev/) を用意し、リポジトリルートで実行します。
 
 ```sh
+mise trust
+mise install
 uv sync --locked
 uv run python src/main.py
 ```
+
+pyright は、[mise.toml](mise.toml) で固定した Node.js を PATH から使います。
+mise の shims フォルダ (Windows の既定は `%LOCALAPPDATA%\mise\shims`) を PATH に追加するか、シェルで `mise activate` を有効にしてください。
+管理外の Node.js を使わないよう、pyright が Node.js を自動取得する nodeenv は依存から除外しています。
+以前に作られた `~/.cache/pyright-python/nodeenv` が残っていると、PATH に `node` がないときにその Node.js が使われるため、削除してください。
 
 Python の規約・品質検証は [共通指示](AGENTS.md) から参照できます。
 AI 設定の配置と各ツールでの確認方法は [AI 開発環境](docs/ai-environment.md) を参照してください。
@@ -30,7 +37,7 @@ AI 設定の配置と各ツールでの確認方法は [AI 開発環境](docs/ai
 
 定期実行は既定ブランチの `main` に workflow がある場合だけ起動し、`develop` の `mise.toml` を確認します。
 手動実行では、選んだブランチの `mise.toml` を確認します。
-現時点では、mise で固定した Node.js を開発のコマンドから使っていません。
+mise で固定した Node.js は、開発時の pyright の実行に使います。
 
 ## 最小構成のビルド
 
