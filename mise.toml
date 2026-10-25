@@ -1,0 +1,4 @@
+# 開発で使う Node.js の版。更新は .github/workflows/node-version.yml が毎週確認する。
+# 新しい版を検知できるよう、major.minor.patch で固定する。
+[tools]
+node = "24.22.1"

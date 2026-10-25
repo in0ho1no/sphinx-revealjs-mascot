@@ -21,6 +21,17 @@ uv run python src/main.py
 Python の規約・品質検証は [共通指示](AGENTS.md) から参照できます。
 AI 設定の配置と各ツールでの確認方法は [AI 開発環境](docs/ai-environment.md) を参照してください。
 
+## 依存の更新監視
+
+依存の更新漏れを防ぐため、毎週金曜 17:30 (Asia/Tokyo) に次の確認を行います。
+
+- Dependabot が GitHub Actions・Docker イメージ・Python 依存 (uv) の更新を `develop` 向けの PR にします。
+- [Node.js Version](.github/workflows/node-version.yml) が [mise.toml](mise.toml) で固定した Node.js を同じメジャーの最新版と比べ、新しい版があれば Issue を作成・更新します。
+
+定期実行は既定ブランチの `main` に workflow がある場合だけ起動し、`develop` の `mise.toml` を確認します。
+手動実行では、選んだブランチの `mise.toml` を確認します。
+現時点では、mise で固定した Node.js を開発のコマンドから使っていません。
+
 ## 最小構成のビルド
 
 必要な依存が導入済みの環境で、リポジトリルートから実行します。

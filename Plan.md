@@ -150,6 +150,25 @@
 - 上端余白が画面高さ基準で、跳躍量が画像高さ基準のため、条件によって `top-*` で見切れる問題は未修正である。次の調整段階へ引き継ぐ。
 - `doze` の時計回り固定による左右の非対称は意図したものではない。向きに応じて傾きを変えることを、次の調整候補に加えた。今回 CSS の傾きは変更していない。
 
+### JavaScript テストの実行経路と Node.js の管理
+
+JavaScript テストが pytest・CI から実行されず、実行方法も記載されていない指摘に対応する。
+`pyright[nodejs]` が持ち込む Node.js は PyPI の wheel を経由し、本家のセキュリティリリースより大きく遅れる場合がある。
+このため Node.js は mise で版を固定し、更新は自作の定期 workflow で確認する。次の3段階で進める。
+
+- [x] 段階1: 依存の更新監視を追加する。`mise.toml` で Node.js を固定し、定期 workflow で同じメジャーの新しい版を確認する。Dependabot に uv を追加する。
+- [ ] 段階2: pyright が使う Node.js を mise で固定した版へ寄せる。
+- [ ] 段階3: Python・JavaScript・CSS の名前の対応を pytest で確認し、pytest から JavaScript テストを起動する。CI で品質検証を実行し、必須チェックに加える。
+
+#### 段階1の結果
+
+- Node.js は `mise.toml` で `major.minor.patch` まで固定した。新しい版の検知には、比較の基準となる固定版が必要なためである。
+- [scripts/check_node_version.py](scripts/check_node_version.py) は、固定版と nodejs.org の公開版一覧を比べる。同じメジャーの新しい版があれば、Task テンプレートの項目に沿った Issue 本文を作る。
+- [Node.js Version](.github/workflows/node-version.yml) は Dependabot と同じ毎週金曜 17:30 (Asia/Tokyo) に実行し、開いている同名の Issue があれば本文を更新する。新しい版がある場合と確認に失敗した場合は、workflow を失敗させる。
+- 定期実行は既定ブランチの `main` に workflow がある場合だけ起動する。公開リポジトリでは、60日間リポジトリの活動がないと定期実行が自動で停止する。活動の定義は公式文書に記載がなく、書き込み権限を持つ利用者のコミットで再開する。
+- Dependabot に uv を追加し、Python 依存の更新も既存と同じ周期・待機日数で PR にする。
+- 公開版一覧の取得はネットワークを使うため、自動テストではファイルから読み込む一覧で比較・本文生成・異常系を検証した。nodejs.org からの実際の取得と、Issue の作成・更新は未確認である。
+
 ## 調整・検証・配布設定
 
 - [ ] 標準画像で表示幅・余白・モーションを調整し、決定した既定値を仕様書に反映する。
