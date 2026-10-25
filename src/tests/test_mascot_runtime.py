@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from scripts.check_node_version import format_version, parse_version, pinned_version
-from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, STATES
+from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, MOTION, STATES
 
 _REPOSITORY = Path(__file__).resolve().parents[2]
 _RUNTIME_TEST = Path(__file__).with_name('test_mascot_runtime.cjs')
@@ -39,6 +39,7 @@ def test_browser_script_state_transitions(node: str) -> None:
         'defaults': DEFAULT_ACTIONS,
         'states': STATES,
         'explicit': [name for name, action in ACTIONS.items() if action.explicit],
+        'motion': MOTION,
     }
     result = subprocess.run(
         [node, '--test', '--test-reporter=tap', str(_RUNTIME_TEST)],

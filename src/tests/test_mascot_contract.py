@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, STATES
+from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, MOTION, STATES
 
 _STATIC = Path(__file__).resolve().parents[1] / 'sphinx_revealjs_mascot/static/sphinx-revealjs-mascot'
 _SCRIPT = (_STATIC / 'mascot.js').read_text(encoding='utf-8')
@@ -36,3 +36,12 @@ def test_names_written_in_javascript_are_defined_in_python() -> None:
     assert {'idle', 'doze', 'wake'} <= actions <= set(ACTIONS)
     assert {'normal', 'blink'} <= sprites <= set(STATES)
     assert defaults == set(DEFAULT_ACTIONS)
+
+
+def test_css_motion_parameters_are_supplied_from_the_python_contract() -> None:
+    referenced = set(re.findall(r'var\(--mascot-([a-z-]+)', _STYLE))
+    layout = {'rendered-width', 'width', 'horizontal-gap', 'top-gap', 'bottom-gap', 'x', 'y', 'facing', 'reaction-duration'}
+    motion = {name.replace('_', '-') for name in MOTION}
+
+    assert referenced - layout <= motion
+    assert motion - {'edge-gap'} <= referenced

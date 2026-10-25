@@ -52,20 +52,25 @@ function fakeClock() {
     };
 }
 
-function fixture({ ready = true, loading = false, initialSlide = null, overrides = {} } = {}) {
+function fixture({ ready = true, loading = false, initialSlide = null, overrides = {}, viewport = [1920, 1080], imageSize = [1024, 1024] } = {}) {
     const elements = new Map();
     const listeners = new Map();
     const domListeners = new Map();
     const clock = fakeClock();
+    const windowListeners = new Map();
     let currentSlide = initialSlide;
     let restarts = 0;
-    function element() {
+    function element(tag) {
         return {
             children: [],
             dataset: {},
             attributes: new Map(),
             hidden: false,
-            get offsetWidth() { restarts++; return 100; },
+            naturalWidth: tag === "img" ? imageSize[0] : 0,
+            naturalHeight: tag === "img" ? imageSize[1] : 0,
+            get offsetWidth() { if (this.className === "react") restarts++; return this.className === "mascot-sleep" ? 60 : 100; },
+            get offsetHeight() { return this.className === "mascot-sleep" ? 36 : 100; },
+            addEventListener(name, handler) { this[name] = handler; },
             style: {
                 setProperty(name, value) {
                     this[name] = value;
@@ -88,6 +93,7 @@ function fixture({ ready = true, loading = false, initialSlide = null, overrides
         toggleKey: "x",
         defaultActions: contract.defaults,
         actions: contract.actions,
+        motion: contract.motion,
         ...overrides,
     };
     elements.set("sphinx-revealjs-mascot-config", { textContent: JSON.stringify(config) });
@@ -106,14 +112,15 @@ function fixture({ ready = true, loading = false, initialSlide = null, overrides
     };
     const math = Object.create(Math);
     math.random = () => 0.5;
+    const window = { Reveal, innerWidth: viewport[0], innerHeight: viewport[1], addEventListener: (name, callback) => windowListeners.set(name, callback) };
     const context = vm.createContext({
-        document, window: { Reveal }, Math: math,
+        document, window, Math: math,
         setTimeout: clock.setTimeout.bind(clock), clearTimeout: clock.clearTimeout.bind(clock),
         performance: { now: clock.now },
     });
     vm.runInContext(source, context);
     return {
-        document, listeners, domListeners, elements, context, clock,
+        document, listeners, domListeners, elements, context, clock, window, windowListeners,
         restarts: () => restarts,
         emit(name, event = {}) {
             if (name === "slidechanged") currentSlide = event.currentSlide;
@@ -477,4 +484,77 @@ test("不正なアクションが来ても進行中のリアクションと完�
     assert.equal(state.clock.next()[0], completion);
     state.clock.advance(1000);
     assert.equal(currentState(state), "idle");
+});
+
+test("四隅では画像と Zzz が各モーションの変位を含めて画面内に収まる", () => {
+    const m = contract.motion;
+    const rotate = ([x, y], angle) => {
+        const rad = angle * Math.PI / 180;
+        return [x * Math.cos(rad) - y * Math.sin(rad), x * Math.sin(rad) + y * Math.cos(rad)];
+    };
+    for (const viewport of [[1920, 1080], [2560, 1080], [1280, 720]]) {
+        for (const requested of [16, 25, 100]) {
+            for (const imageSize of [[1024, 1024], [600, 1200], [1600, 800]]) {
+                const state = fixture({ viewport, imageSize, overrides: { width: requested } });
+                const style = state.elements.get("chara").style;
+                const width = parseFloat(style["--mascot-rendered-width"]);
+                const height = width * imageSize[1] / imageSize[0];
+                const gap = parseFloat(style["--mascot-horizontal-gap"]);
+                const top = parseFloat(style["--mascot-top-gap"]);
+                const bottom = parseFloat(style["--mascot-bottom-gap"]);
+                assert.ok(width > 0 && width <= viewport[0] * requested / 100);
+                const poses = [[1, 0, 0, false], [1, 0, m.jump_height, false], [m.surprise_scale, 0, 0, false]];
+                for (const sign of [-1, 1]) {
+                    poses.push([1, sign * m.wake_angle, m.wake_height, false]);
+                    for (const angle of [m.doze_min_angle, m.doze_max_angle]) poses.push([1, sign * angle, 0, true]);
+                }
+                for (const anchor of ["top-left", "top-right", "bottom-left", "bottom-right"]) {
+                    const foot = [anchor.endsWith("left") ? gap + width / 2 : viewport[0] - gap - width / 2,
+                        anchor.startsWith("top") ? top + height : viewport[1] - bottom];
+                    for (const [scale, tilt, lift, sleeping] of poses) {
+                        const corners = [[-width / 2, -height], [width / 2, -height], [-width / 2, 0], [width / 2, 0]];
+                        if (sleeping) {
+                            const right = width * (0.5 - m.sleep_right);
+                            for (const x of [right - 60, right]) {
+                                for (const y of [-height - 36 * m.sleep_rise, -height + 36]) corners.push([x, y]);
+                            }
+                        }
+                        for (const sway of [-m.sway_angle, 0, m.sway_angle]) {
+                            for (const breath of [1, m.breath_scale]) {
+                                for (const point of corners) {
+                                    let [x, y] = rotate(point.map((value) => value * scale), tilt);
+                                    y = (y - lift * height) * breath;
+                                    [x, y] = rotate([x, y], sway);
+                                    x += foot[0]; y += foot[1];
+                                    const context = JSON.stringify({ viewport, requested, imageSize, anchor, x, y });
+                                    assert.ok(x >= -1e-6 && x <= viewport[0] + 1e-6, context);
+                                    assert.ok(y >= -1e-6 && y <= viewport[1] + 1e-6, context);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+});
+
+test("リサイズ・画像ロード・再表示時にレイアウトを更新し、スライド間の表示幅を揃える", () => {
+    const state = fixture({ overrides: { width: 100 } });
+    const chara = state.elements.get("chara");
+    const before = chara.style["--mascot-rendered-width"];
+    state.emit("slidechanged", { currentSlide: slide({ anchor: "center", x: 0, y: 0, facing: 1 }, { h: 1 }) });
+    assert.equal(chara.style["--mascot-rendered-width"], before);
+    state.window.innerHeight = 600;
+    state.windowListeners.get("resize")();
+    assert.ok(parseFloat(chara.style["--mascot-rendered-width"]) < parseFloat(before));
+    state.key();
+    state.window.innerHeight = 1080;
+    state.windowListeners.get("resize")();
+    state.key();
+    assert.equal(chara.style["--mascot-rendered-width"], before);
+    const image = state.elements.get("chara-img");
+    image.naturalHeight = 2048;
+    image.load();
+    assert.ok(parseFloat(chara.style["--mascot-rendered-width"]) < parseFloat(before));
 });

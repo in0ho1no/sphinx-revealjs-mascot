@@ -11,7 +11,7 @@ from sphinx.application import Sphinx
 from sphinx.util.osutil import relative_uri
 from sphinx.util.typing import ExtensionMetadata
 
-from sphinx_revealjs_mascot.config import ACTIONS, CONFIG_DEFAULTS, DEFAULT_ACTIONS, STATES, Settings, resolve_settings
+from sphinx_revealjs_mascot.config import ACTIONS, CONFIG_DEFAULTS, DEFAULT_ACTIONS, MOTION, STATES, Settings, resolve_settings
 from sphinx_revealjs_mascot.directives import (
     MascotDirective,
     MascotFragment,
@@ -21,11 +21,10 @@ from sphinx_revealjs_mascot.directives import (
     depart_fragment,
     visit_fragment,
 )
-
-_ASSET_NAME = 'sphinx-revealjs-mascot'
-_STATIC_DIR = Path(__file__).parent / 'static'
-# 配布パッケージ化までは、画像を複製して保守せず既存の原本を参照する。
-_IMAGE_DIR = Path(__file__).resolve().parents[2] / 'examples/_static/mascot/joubitaki'
+from sphinx_revealjs_mascot.notices import export_notices, verify
+from sphinx_revealjs_mascot.resources import ASSET_NAME as _ASSET_NAME
+from sphinx_revealjs_mascot.resources import STATIC_DIR as _STATIC_DIR
+from sphinx_revealjs_mascot.resources import notice_root, project_license, standard_image_directory
 
 
 def _settings(app: Sphinx) -> Settings:
@@ -42,7 +41,8 @@ def _configure_assets(app: Sphinx) -> None:
     """画像の存在を確認し、拡張の CSS・JavaScript を登録する。"""
     if not _is_revealjs(app):
         return
-    app.env.domaindata[_ASSET_NAME] = {'settings': resolve_settings(app.config, Path(app.confdir), _IMAGE_DIR)}
+    verify(notice_root())
+    app.env.domaindata[_ASSET_NAME] = {'settings': resolve_settings(app.config, Path(app.confdir), standard_image_directory())}
     app.add_static_dir(_STATIC_DIR)
     app.add_css_file(f'{_ASSET_NAME}/mascot.css')
     app.add_js_file(f'{_ASSET_NAME}/mascot.js', loading_method='defer')
@@ -62,19 +62,23 @@ def _page_config(app: Sphinx, pagename: str, templatename: str, context: dict[st
         'toggleKey': settings.toggle_key,
         'defaultActions': DEFAULT_ACTIONS,
         'actions': {name: asdict(definition) for name, definition in ACTIONS.items()},
+        'motion': MOTION,
     }
     body = json.dumps(config, ensure_ascii=True).replace('<', r'\u003c')
     app.add_js_file(None, body=body, type='application/json', id='sphinx-revealjs-mascot-config')
 
 
 def _copy_images(app: Sphinx, exception: Exception | None) -> None:
-    """成功したビルドへ標準画像の原本をそのままコピーする。"""
+    """成功したビルドへ選択した画像と配布用の通知をコピーする。"""
     if exception is not None or not _is_revealjs(app):
         return
     destination = Path(app.outdir) / '_static' / _ASSET_NAME / 'images'
     destination.mkdir(parents=True, exist_ok=True)
     for state, source in _settings(app).images.items():
         shutil.copyfile(source, destination / f'{state}.png')
+    shutil.copyfile(project_license(), destination.parent / 'LICENSE')
+    shutil.copyfile(standard_image_directory() / 'README.md', destination.parent / 'STANDARD-IMAGES.md')
+    export_notices(notice_root(), Path(app.outdir) / 'third_party')
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
@@ -91,4 +95,4 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.connect('builder-inited', _configure_assets)
     app.connect('html-page-context', _page_config)
     app.connect('build-finished', _copy_images)
-    return {'env_version': 3, 'parallel_read_safe': True, 'parallel_write_safe': True}
+    return {'env_version': 4, 'parallel_read_safe': True, 'parallel_write_safe': True}

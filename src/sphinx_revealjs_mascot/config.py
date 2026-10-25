@@ -31,6 +31,23 @@ ACTIONS = {
     'wake': Action('surprise', duration=500, explicit=False, motion=True),
 }
 DEFAULT_ACTIONS = {'slide': 'jump', 'fragment': 'wink'}
+MOTION = {
+    'sway_angle': 1.5,
+    'sway_duration': 3700,
+    'breath_scale': 1.015,
+    'breath_duration': 2900,
+    'jump_height': 0.15,
+    'surprise_scale': 1.06,
+    'wake_height': 0.08,
+    'wake_angle': 3,
+    'doze_min_angle': 2,
+    'doze_max_angle': 8,
+    'doze_duration': 4800,
+    'sleep_rise': 0.4,
+    'sleep_right': 0.1,
+    'sleep_duration': 2400,
+    'edge_gap': 12,
+}
 IMAGE_PATTERNS = ('{state}.png', 'file-name_{state}.png', '{state}_file-name.png')
 CONFIG_DEFAULTS: dict[str, Any] = {
     'revealjs_mascot_image_dir': None,

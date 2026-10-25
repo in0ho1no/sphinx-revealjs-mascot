@@ -3,11 +3,39 @@ name = "sphinx-revealjs-mascot"
 version = "0.1.0"  # Major.Minor.Patch
 description = "sphinx-revealjs-mascot"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.14"
 dependencies = [
     "docutils>=0.21,<0.23",
     "sphinx>=9.2.0",
     "sphinx-revealjs>=3.2.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sphinx_revealjs_mascot"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"examples/_static/mascot/joubitaki" = "sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/images"
+"third_party/README.md" = "sphinx_revealjs_mascot/third_party/README.md"
+"third_party/manifest.json" = "sphinx_revealjs_mascot/third_party/manifest.json"
+"third_party/NOTICES.txt" = "sphinx_revealjs_mascot/third_party/NOTICES.txt"
+"LICENSE" = "sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/LICENSE"
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "src/sphinx_revealjs_mascot",
+    "examples/_static/mascot/joubitaki",
+    "third_party/README.md",
+    "third_party/manifest.json",
+    "third_party/NOTICES.txt",
+    "pyproject.toml",
+    "README.md",
+    "docs/SPEC.md",
+    "LICENSE",
 ]
 
 [dependency-groups]

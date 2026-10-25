@@ -4,6 +4,40 @@
     const BLINK = { min: 2200, max: 6000, duration: 140 };
     const MAX_TIMEOUT = 2147483647;
 
+    function motionGaps(width, height, label, motion) {
+        const sine = (angle) => Math.sin(angle * Math.PI / 180);
+        let horizontal = 0;
+        let top = 0;
+        let bottom = 0;
+        for (const [scale, angle, lift] of [
+            [1, 0, 0],
+            [1, 0, motion.jump_height],
+            [motion.surprise_scale, 0, 0],
+            [1, motion.wake_angle, motion.wake_height],
+            [1, motion.doze_max_angle, 0],
+        ]) {
+            const stretch = scale * motion.breath_scale;
+            const tilt = sine(angle + motion.sway_angle);
+            horizontal = Math.max(horizontal, (stretch - 1) * width / 2 + stretch * height * tilt + lift * height * stretch * sine(motion.sway_angle));
+            top = Math.max(top, (stretch - 1) * height + stretch * width / 2 * tilt + lift * height * stretch);
+            bottom = Math.max(bottom, stretch * width / 2 * tilt);
+        }
+        // 透明部分を差し引かず、画像全体と Zzz の矩形を保守的に画面内へ収める。
+        const tilt = sine(motion.doze_max_angle + motion.sway_angle);
+        const textRight = width * (0.5 - motion.sleep_right);
+        const textX = Math.max(Math.abs(textRight - label.width), Math.abs(textRight));
+        const textUp = height + label.height * motion.sleep_rise;
+        const textDown = Math.max(0, label.height - height);
+        horizontal = Math.max(horizontal, motion.breath_scale * (textX + Math.max(textUp, textDown) * tilt) - width / 2);
+        top = Math.max(top, motion.breath_scale * (textUp + textX * tilt) - height);
+        bottom = Math.max(bottom, motion.breath_scale * (textDown + textX * tilt));
+        return {
+            horizontal: Math.ceil(horizontal + motion.edge_gap),
+            top: Math.ceil(top + motion.edge_gap),
+            bottom: Math.ceil(bottom + motion.edge_gap),
+        };
+    }
+
     function applyPosition(chara, config, slide) {
         const position = slide && slide.hasAttribute("data-mascot-position")
             ? {
@@ -28,7 +62,12 @@
         const chara = document.createElement("div");
         chara.id = "chara";
         chara.setAttribute("aria-hidden", "true");
+        chara.dataset.ready = "false";
         chara.style.setProperty("--mascot-width", `${config.width}vw`);
+        for (const [name, value] of Object.entries(config.motion)) {
+            const unit = name.endsWith("_angle") ? "deg" : name.endsWith("_duration") ? "ms" : "";
+            chara.style.setProperty(`--mascot-${name.replaceAll("_", "-")}`, `${value}${unit}`);
+        }
 
         let parent = chara;
         let reaction;
@@ -63,6 +102,34 @@
         let state = "idle";
         let lastActivity = performance.now();
         let previous = deck.getIndices(deck.getCurrentSlide());
+
+        function layout() {
+            if (!visible || !image.naturalWidth || !image.naturalHeight) return;
+            const ratio = image.naturalHeight / image.naturalWidth;
+            const label = { width: sleep.offsetWidth, height: sleep.offsetHeight };
+            const requested = window.innerWidth * config.width / 100;
+            function fits(width) {
+                const gaps = motionGaps(width, width * ratio, label, config.motion);
+                return width + 2 * gaps.horizontal <= window.innerWidth && width * ratio + gaps.top + gaps.bottom <= window.innerHeight;
+            }
+            let width = requested;
+            if (!fits(width)) {
+                let low = 0;
+                let high = requested;
+                for (let i = 0; i < 40; i++) {
+                    const middle = (low + high) / 2;
+                    if (fits(middle)) low = middle;
+                    else high = middle;
+                }
+                width = Math.floor(low * 1000) / 1000;
+            }
+            const gaps = motionGaps(width, width * ratio, label, config.motion);
+            chara.style.setProperty("--mascot-rendered-width", `${width}px`);
+            chara.style.setProperty("--mascot-horizontal-gap", `${gaps.horizontal}px`);
+            chara.style.setProperty("--mascot-top-gap", `${gaps.top}px`);
+            chara.style.setProperty("--mascot-bottom-gap", `${gaps.bottom}px`);
+            chara.dataset.ready = "true";
+        }
 
         function cancel(name) {
             clearTimeout(timers.get(name));
@@ -135,6 +202,7 @@
         function resume() {
             previous = deck.getIndices(deck.getCurrentSlide());
             applyPosition(chara, config, deck.getCurrentSlide());
+            layout();
             runAction("idle");
             resetIdleTimer();
         }
@@ -169,6 +237,8 @@
                 image.src = sprites.normal.src;
             }
         }, { capture: true });
+        image.addEventListener("load", layout);
+        window.addEventListener("resize", layout);
         resume();
     }
 

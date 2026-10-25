@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from sphinx.application import Sphinx
 
-from scripts import collect_licenses
+from sphinx_revealjs_mascot import notices as collect_licenses
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def test_revealjs_build_includes_third_party_notices(tmp_path: Path) -> None:
         outdir=output,
         doctreedir=tmp_path / 'doctrees',
         buildername='revealjs',
-        confoverrides={'extensions': ['sphinx_revealjs'], 'root_doc': 'index'},
+        confoverrides={'extensions': ['sphinx_revealjs_mascot'], 'root_doc': 'index'},
         status=io.StringIO(),
         warning=warnings,
         warningiserror=True,
