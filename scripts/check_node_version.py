@@ -14,6 +14,7 @@ from requests.exceptions import RequestException
 
 ROOT = Path(__file__).resolve().parents[1]
 _VERSION = re.compile(r'v?(\d+)\.(\d+)\.(\d+)')
+_PRE_RELEASE_VERSION = re.compile(r'v?\d+\.\d+\.\d+-[0-9A-Za-z.-]+')
 
 type Version = tuple[int, int, int]
 type Index = list[dict[str, Any]]
@@ -55,7 +56,10 @@ def newer_releases(pinned: Version, index: Index) -> list[Release]:
     """固定した版より新しい、同じメジャーの公開版を新しい順に返す。"""
     releases: list[Release] = []
     for entry in index:
-        version = parse_version(entry['version'])
+        raw_version = entry['version']
+        if isinstance(raw_version, str) and _PRE_RELEASE_VERSION.fullmatch(raw_version.strip()):
+            continue
+        version = parse_version(raw_version)
         if version[0] == pinned[0] and version > pinned:
             releases.append(Release(version, entry['date'], entry.get('security') is True))
     return sorted(releases, key=lambda release: release.version, reverse=True)
