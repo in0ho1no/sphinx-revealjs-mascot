@@ -17,6 +17,7 @@ Claude Code・Codex・GitHub Copilot に共通する作業規約の正本。
 - Python の品質検証: [.agents/skills/sk-python-quality/SKILL.md](.agents/skills/sk-python-quality/SKILL.md)
 - Python のレビュー: [.agents/roles/python-review.md](.agents/roles/python-review.md)
 - Python の品質修正: [.agents/roles/python-quality.md](.agents/roles/python-quality.md)
+- `sphinx-revealjs` 更新 PR をレビューするときは、素材・ライセンス確認の手順を [third_party/README.md](third_party/README.md#update-review) に従う。
 - AI 設定の変更後: `uv run python scripts/check_ai_environment.py --hooks` を実行する。
 
 共通規約や手順を各ツールの入口へコピーしない。配置と互換性は [docs/ai-environment.md](docs/ai-environment.md) を参照する。

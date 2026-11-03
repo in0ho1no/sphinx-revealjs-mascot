@@ -71,7 +71,7 @@ Hatchling と拡張のビルド処理で配布物・HTML へ取り込み、複�
 画像説明書を Sphinx の原稿として検出しないよう、サンプルの `_static` は原稿の対象から除外している。
 
 ライセンス通知は HTML に同梱する素材を対象とし、ビルド環境の Python 推移依存全体を収集する構成へ戻さない。
-[notices.py](../src/sphinx_revealjs_mascot/notices.py) に検証・コピーを集約し、素材提供元の版と通知のハッシュを確認する。
+[notices.py](../src/sphinx_revealjs_mascot/notices.py) に検証・コピーを集約し、HTML に同梱する静的素材と通知のハッシュを確認する。
 詳細は [ライセンスの扱い](../third_party/README.md)、配布物の内容と原本との一致は [test_distribution.py](../src/tests/test_distribution.py) を参照する。
 
 ## 検証範囲
