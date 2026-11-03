@@ -3,7 +3,7 @@
 import hashlib
 import json
 import shutil
-from importlib.metadata import version
+from importlib.metadata import distribution
 from pathlib import Path
 from typing import Any, cast
 
@@ -18,13 +18,38 @@ def _inside(root: Path, relative: str) -> Path:
     return target
 
 
+def _revealjs_static_path(package_name: str) -> Path:
+    """インストール済み配布物の Reveal.js 素材のパスを返す。"""
+    return Path(str(distribution(package_name).locate_file('sphinx_revealjs/_static/revealjs')))
+
+
+def _tree_sha256(root: Path) -> str:
+    """ディレクトリ内のファイルパスと内容から安定したハッシュを計算する。"""
+    if not root.is_dir():
+        raise ValueError(f'同梱素材のフォルダがありません: {root}')
+    files = sorted(path for path in root.rglob('*') if path.is_file())
+    if not files:
+        raise ValueError(f'同梱素材がありません: {root}')
+
+    digest = hashlib.sha256()
+    for path in files:
+        relative = path.relative_to(root).as_posix().encode('utf-8')
+        content = path.read_bytes()
+        digest.update(len(relative).to_bytes(8, 'big'))
+        digest.update(relative)
+        digest.update(len(content).to_bytes(8, 'big'))
+        digest.update(content)
+    return digest.hexdigest()
+
+
 def verify(root: Path) -> Record:
-    """同梱素材の配布元の版と、通知のハッシュを確認する。"""
+    """同梱素材の内容と、通知のハッシュを確認する。"""
     output = root / 'third_party'
     manifest = cast(Record, json.loads((output / 'manifest.json').read_text(encoding='utf-8')))
     package = manifest['source_distribution']
-    if version(package['name']) != package['version']:
-        raise ValueError('sphinx-revealjs が更新されています。同梱素材の通知を再確認してください。')
+    static_assets = _revealjs_static_path(package['name'])
+    if _tree_sha256(static_assets) != manifest['static_assets_sha256']:
+        raise ValueError('sphinx-revealjs の同梱素材が更新されています。ライセンス通知を再確認してください。')
     notice = manifest['notice']
     source = _inside(output, notice['path'])
     if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != notice['sha256']:
