@@ -1,7 +1,8 @@
 # sphinx-revealjs-mascot 仕様書
 
 本書は初期版の動作・利用者向け設定・既定値・エラー条件の正本とする。サンプルは利用例に限定し、これらの定義を複写しない。
-プロジェクトの現状と開発の開始方法は [README.md](../README.md)、依存・Python 要件・検証設定は [pyproject.toml](../pyproject.toml)、依存の固定バージョンは `uv.lock` を正本とする。
+プロジェクトの概要と利用の入口は [README.md](../README.md)、環境構築・ビルド・検証手順は [開発と検証](development.md) を参照する。
+依存・Python 要件・検証設定は [pyproject.toml](../pyproject.toml)、依存の固定バージョンは `uv.lock` を正本とする。
 
 ## 背景と目的
 

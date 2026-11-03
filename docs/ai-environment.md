@@ -19,6 +19,19 @@ Copilot が複数の対応ディレクトリから同名スキルを候補表示
 
 レビュー・品質修正の `agents/` は、各ツールの名前・モデル・利用可能ツールの指定を維持しています。Codex では共通指示から役割文書を読みます。Claude/Copilot の agent 定義を Codex 用の設定として読み込ませる必要はありません。
 
+## スライド作成用 SKILL の持ち運び <a id="portable-slide-skill"></a>
+
+[markdown-to-slides](../.agents/skills/markdown-to-slides/SKILL.md) は、用意済みの Markdown を、意味と順序を保ってスライドへ変換するスキルです。
+依頼例と参照資料の案内は [README](../README.md#ai-slide-authoring) を参照してください。
+
+別プロジェクトで使う場合は、`.agents/skills/markdown-to-slides/` をフォルダごとコピーし、`SKILL.md`・`references/`・`assets/` の相対配置を保ちます。
+コピー先の AI ツールでスキルとして読み込むか、AI にコピー先の `SKILL.md` を読むよう指示します。
+このリポジトリの `.claude/skills/markdown-to-slides/SKILL.md` は正本への参照だけを持つ入口なので、そのファイルだけを持ち運ぶ構成にはしません。
+
+拡張の使い方は `references/mascot.md`、sphinx-revealjs の記法と作成手順は `references/sphinx-revealjs.md`、作成時にコピーする雛形は `assets/starter/` に含めています。
+拡張本体や Python の依存パッケージは SKILL に同梱しません。利用先で必要な依存を準備してください。
+参照資料には対象バージョンと参照元を記載しているため、異なる版で使う場合は仕様との対応を確認します。
+
 ## 権限制御とフック
 
 Claude Code は [.claude/settings.json](../.claude/settings.json)、Copilot は [pre-tool-use.json](../.github/hooks/pre-tool-use.json) と [post-tool-use.json](../.github/hooks/post-tool-use.json) から共通検査を呼び出します。フック起動時には、PATH 上で uv コマンドを実行できる必要があります。  
