@@ -53,9 +53,10 @@ def test_static_asset_hash_uses_portable_path_order(tmp_path: Path) -> None:
     assets = tmp_path / 'assets'
     (assets / 'css').mkdir(parents=True)
     (assets / 'css/layout.scss').write_bytes(b'layout\n')
+    (assets / 'css-print.css').write_bytes(b'print\n')
     (assets / 'LICENSE').write_bytes(b'license\n')
 
-    assert collect_licenses._tree_sha256(assets) == '68bca45e33d860d431958b0b68177bcca096b0a8be758e4ab8bf2dcf31de193a'
+    assert collect_licenses._tree_sha256(assets) == 'c05176e1391d86fb233740c893f25df8eab8fc8ca54f6ea2f2139d137f3748fd'
 
 
 def test_manifested_provider_version_does_not_block_unchanged_static_assets(notice_repository: Path) -> None:
