@@ -27,7 +27,7 @@ def _tree_sha256(root: Path) -> str:
     """ディレクトリ内のファイルパスと内容から安定したハッシュを計算する。"""
     if not root.is_dir():
         raise ValueError(f'同梱素材のフォルダがありません: {root}')
-    files = sorted(path for path in root.rglob('*') if path.is_file())
+    files = sorted((path for path in root.rglob('*') if path.is_file()), key=lambda path: path.relative_to(root).as_posix())
     if not files:
         raise ValueError(f'同梱素材がありません: {root}')
 

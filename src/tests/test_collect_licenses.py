@@ -49,6 +49,15 @@ def test_unrelated_lock_update_does_not_invalidate_notices(notice_repository: Pa
     collect_licenses.verify(notice_repository)
 
 
+def test_static_asset_hash_uses_portable_path_order(tmp_path: Path) -> None:
+    assets = tmp_path / 'assets'
+    (assets / 'css').mkdir(parents=True)
+    (assets / 'css/layout.scss').write_bytes(b'layout\n')
+    (assets / 'LICENSE').write_bytes(b'license\n')
+
+    assert collect_licenses._tree_sha256(assets) == '68bca45e33d860d431958b0b68177bcca096b0a8be758e4ab8bf2dcf31de193a'
+
+
 def test_manifested_provider_version_does_not_block_unchanged_static_assets(notice_repository: Path) -> None:
     manifest_path = notice_repository / 'third_party/manifest.json'
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
