@@ -21,7 +21,7 @@ _RUNTIME_TEST = Path(__file__).with_name('test_mascot_runtime.cjs')
 def node() -> str:
     path = shutil.which('node')
     if path is None:
-        pytest.fail('PATH に node がありません。README の開発の開始に沿って mise を準備してください。')
+        pytest.fail('PATH に node がありません。docs/development.md の開発環境の準備に沿って mise を準備してください。')
     return path
 
 
