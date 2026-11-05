@@ -5,7 +5,7 @@
 初期版の拡張本体、ディレクティブ、モーション、状態遷移、配布パッケージ化は実装済みである。
 標準画像の表示幅・余白・モーションは Chrome・Edge で確認し、現在の実装値を初版の既定値としている。
 
-動作・設定・エラー条件は [仕様書](SPEC.md)、環境構築・ビルド・確認手順は [README](../README.md) を正本とする。
+動作・設定・エラー条件は [仕様書](SPEC.md)、環境構築・ビルド・確認手順は [開発と検証](development.md) を正本とする。
 依存と配布設定は [pyproject.toml](../pyproject.toml)、固定版は [uv.lock](../uv.lock)、作業規約は [AGENTS.md](../AGENTS.md) を参照する。
 本書には保守時に必要な設計判断と、検証範囲を記録する。
 
@@ -33,7 +33,7 @@ TAP の集計でテストが 0 件でなく、すべて成功したことを確�
 
 pyright の Node.js 自動取得や過去の nodeenv キャッシュにより、管理外の Node.js が選ばれる場合があった。
 Node.js は [mise.toml](../mise.toml) で固定し、nodeenv は依存から除外している。
-PATH と古いキャッシュの確認手順は README、静的解析の手順は [sk-python-quality](../.agents/skills/sk-python-quality/SKILL.md) を参照する。
+PATH と古いキャッシュの確認手順は [開発環境の準備](development.md#setup)、静的解析の手順は [sk-python-quality](../.agents/skills/sk-python-quality/SKILL.md) を参照する。
 PATH が不足している場合に、pyright が案内する `pyright[nodejs]` の追加で対処しない。
 
 CI と手元で Python の系列が異なる状態もあった。
@@ -71,7 +71,7 @@ Hatchling と拡張のビルド処理で配布物・HTML へ取り込み、複�
 画像説明書を Sphinx の原稿として検出しないよう、サンプルの `_static` は原稿の対象から除外している。
 
 ライセンス通知は HTML に同梱する素材を対象とし、ビルド環境の Python 推移依存全体を収集する構成へ戻さない。
-[notices.py](../src/sphinx_revealjs_mascot/notices.py) に検証・コピーを集約し、素材提供元の版と通知のハッシュを確認する。
+[notices.py](../src/sphinx_revealjs_mascot/notices.py) に検証・コピーを集約し、HTML に同梱する静的素材と通知のハッシュを確認する。
 詳細は [ライセンスの扱い](../third_party/README.md)、配布物の内容と原本との一致は [test_distribution.py](../src/tests/test_distribution.py) を参照する。
 
 ## 検証範囲
@@ -88,7 +88,7 @@ Hatchling と拡張のビルド処理で配布物・HTML へ取り込み、複�
 
 サンプル全体は `sphinx-build -E -W -b revealjs` でビルドを確認している。
 pytest では `sphinx-revealjs` 内部の非推奨 API 使用による警告がある。
-実行コマンドは README と各検証手順を参照し、結果は対象コミットの CI または実行時の出力で確認する。
+実行コマンドは [開発と検証](development.md) と各検証手順を参照し、結果は対象コミットの CI または実行時の出力で確認する。
 
 Node.js 公開版一覧の取得と比較は CI で成功している。更新 Issue の作成・更新の実運用は未確認である。
 

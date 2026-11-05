@@ -1,0 +1,43 @@
+:root {
+  --r-background-color: #ffffff;
+  --r-main-color: #1f2937;
+  --r-heading-color: #1f2937;
+  --r-heading-text-transform: none;
+  --r-link-color: #0759b5;
+  --r-link-color-hover: #0759b5;
+  --r-main-font: "Yu Gothic", "Meiryo", "Hiragino Kaku Gothic ProN", sans-serif;
+  --r-heading-font: "Yu Gothic", "Meiryo", "Hiragino Kaku Gothic ProN", sans-serif;
+  --r-main-font-size: 36px;
+  --r-heading1-size: 1.7em;
+  --r-heading2-size: 1.3em;
+  --r-heading3-size: 1.1em;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slides section > :not(section) {
+  box-sizing: border-box;
+  max-width: 76%;
+}
+
+.reveal p,
+.reveal li {
+  line-height: 1.5;
+}
+
+.reveal table {
+  margin-left: 0;
+  font-size: 32px;
+}
+
+.reveal pre {
+  margin-left: 0;
+  font-size: 32px;
+}
+
+.reveal pre code {
+  max-height: none;
+  line-height: 1.35;
+}
