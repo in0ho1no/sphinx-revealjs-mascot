@@ -40,6 +40,7 @@ PATH に `node` がない場合や、`node` の版が `mise.toml` と異なる�
 
 pull request と `develop` への push では、[Tests](../.github/workflows/tests.yml) が依存を同期し、ruff・mypy・pyright・pytest を実行します。
 `tests` は `develop` の必須チェックです。`main` は pull request 経由のマージと、`semgrep`・`gitleaks` のチェックを必須にしています。
+`semgrep`・`gitleaks` は、[Security Scan](../.github/workflows/security-scan.yml) が `develop` と `main` への pull request・push で実行します。
 必須チェックの設定は `develop` を [gh-RequiredCI.json](../git-setup/gh-RequiredCI.json)、`main` を [gh-MainProtection.json](../git-setup/gh-MainProtection.json) を正本とし、[gh-enable-push-protection-win.bat](../git-setup/gh-enable-push-protection-win.bat) で GitHub に反映します。
 `main` への push では、[Build](../.github/workflows/build.yml) が wheel とソース配布物のビルドを確認します。
 成果物は Actions の artifact に保存せず、PyPI にも公開しません。

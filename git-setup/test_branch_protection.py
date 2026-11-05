@@ -130,7 +130,7 @@ class BranchProtectionTests(unittest.TestCase):
         for event in ("push", "pull_request"):
             section = re.search(rf"(?m)^  {event}:\n    branches:\n((?:      - .+\n)+)", workflow)
             self.assertIsNotNone(section)
-            self.assertEqual(re.findall(r"(?m)^      - (.+)$", section.group(1)), ["develop"])
+            self.assertEqual(re.findall(r"(?m)^      - (.+)$", section.group(1)), ["develop", "main"])
         for check in ("semgrep", "gitleaks"):
             self.assertRegex(workflow, rf"(?m)^    name: {check}$")
         tests = (ROOT / ".github" / "workflows" / "tests.yml").read_text(encoding="utf-8")
