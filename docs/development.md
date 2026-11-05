@@ -43,6 +43,13 @@ pull request と `develop` への push では、[Tests](../.github/workflows/tes
 `main` への push では、[Build](../.github/workflows/build.yml) が wheel とソース配布物のビルドを確認します。
 成果物は Actions の artifact に保存せず、PyPI にも公開しません。
 
+GitHub 設定スクリプトのテスト [test_branch_protection.py](../git-setup/test_branch_protection.py) は Windows 専用のため、`uv run pytest` と CI の対象に含めていません。
+`git-setup/` のスクリプト、Ruleset、Dependabot、関連する workflow を変更した場合は、Windows で次を実行します。
+
+```sh
+uv run pytest git-setup/test_branch_protection.py
+```
+
 ## 設定と本文指定のサンプル
 
 開発環境を準備済みの状態で、リポジトリルートから実行します。
@@ -123,6 +130,6 @@ uv による依存解決には、[pyproject.toml](../pyproject.toml) の `exclud
 Node.js の更新確認は開発用依存の Requests を使い、Tests と同じ `uv.lock` に従った環境で実行します。
 取得先は公式の HTTPS URL に固定し、証明書検証・タイムアウトを有効にします。リダイレクトは追従せず、環境由来の認証情報・CA・プロキシ設定は使用しません。
 
-定期実行は既定ブランチの `main` に workflow がある場合だけ起動し、`develop` の `mise.toml` を確認します。
+定期実行は既定ブランチの `develop` にある workflow から起動し、`develop` の `mise.toml` を確認します。
 手動実行では、選んだブランチの `mise.toml` を確認します。
 Tests でも同じ確認を行い、新しい版があれば失敗にせず警告を表示します。
