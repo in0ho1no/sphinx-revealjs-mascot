@@ -10,11 +10,6 @@ resolution-markers = [
 exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "P7D"
 
-[options.exclude-newer-package]
-certifi = "2026-10-23T11:36:16.479Z"
-sphinx = "2026-10-21T00:05:15.02Z"
-sphinxcontrib-jsmath = "2026-10-20T18:22:05.515Z"
-
 [manifest]
 excludes = ["nodeenv"]
 
