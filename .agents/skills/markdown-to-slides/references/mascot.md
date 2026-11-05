@@ -4,10 +4,10 @@
 
 本拡張は sphinx-revealjs のスライド上にキャラクターを常駐表示する。スライド本文のデザインや、本文を検出した位置の自動回避は行わない。
 
-- 対象バージョン: sphinx-revealjs-mascot 0.1.0
-- 対応内容の基準: `58ca144b8fd3a0ba7db1596b84480260cff7844b`
+- 対象バージョン: sphinx-revealjs-mascot 0.1.1
+- 対応内容の基準: `a1cab9b20ccab102edfdf405de70b7ecc4917e71`
 - 仕様の正本: [リポジトリの仕様書](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/docs/SPEC.md)
-- この資料の対応時点: [基準コミットの仕様書](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/58ca144b8fd3a0ba7db1596b84480260cff7844b/docs/SPEC.md)
+- この資料の対応時点: [基準コミットの仕様書](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/a1cab9b20ccab102edfdf405de70b7ecc4917e71/docs/SPEC.md)
 
 以下はスライド作成に必要な使い方の抜粋である。リポジトリ外へコピーしても使えるよう、正本の閲覧なしで基本的な設定と記述ができる範囲を含める。
 利用するバージョンが異なる場合や設定を拡張する場合は、利用先の仕様と照合する。
