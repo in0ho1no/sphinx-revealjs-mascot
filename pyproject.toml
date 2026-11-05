@@ -1,6 +1,6 @@
 [project]
 name = "sphinx-revealjs-mascot"
-version = "0.1.0"  # Major.Minor.Patch
+version = "0.1.1"  # Major.Minor.Patch
 description = "sphinx-revealjs-mascot"
 readme = "README.md"
 license = "MIT"
