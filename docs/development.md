@@ -39,9 +39,18 @@ PATH に `node` がない場合や、`node` の版が `mise.toml` と異なる�
 静的解析の手順は [sk-python-quality](../.agents/skills/sk-python-quality/SKILL.md) を参照してください。
 
 pull request と `develop` への push では、[Tests](../.github/workflows/tests.yml) が依存を同期し、ruff・mypy・pyright・pytest を実行します。
-`tests` は `develop` の必須チェックです。必須チェックの設定は [gh-RequiredCI.json](../git-setup/gh-RequiredCI.json) を正本とし、[gh-enable-push-protection-win.bat](../git-setup/gh-enable-push-protection-win.bat) で GitHub に反映します。
+`tests` は `develop` の必須チェックです。`main` は pull request 経由のマージと、`semgrep`・`gitleaks` のチェックを必須にしています。
+`semgrep`・`gitleaks` は、[Security Scan](../.github/workflows/security-scan.yml) が `develop` と `main` への pull request・push で実行します。
+必須チェックの設定は `develop` を [gh-RequiredCI.json](../git-setup/gh-RequiredCI.json)、`main` を [gh-MainProtection.json](../git-setup/gh-MainProtection.json) を正本とし、[gh-enable-push-protection-win.bat](../git-setup/gh-enable-push-protection-win.bat) で GitHub に反映します。
 `main` への push では、[Build](../.github/workflows/build.yml) が wheel とソース配布物のビルドを確認します。
 成果物は Actions の artifact に保存せず、PyPI にも公開しません。
+
+GitHub 設定スクリプトのテスト [test_branch_protection.py](../git-setup/test_branch_protection.py) は Windows 専用のため、`uv run pytest` と CI の対象に含めていません。
+`git-setup/` のスクリプト、Ruleset、Dependabot、関連する workflow を変更した場合は、Windows で次を実行します。
+
+```sh
+uv run pytest git-setup/test_branch_protection.py
+```
 
 ## 設定と本文指定のサンプル
 
@@ -109,9 +118,8 @@ Python 要件と実行時依存は wheel のメタデータに含まれます。
 ## 依存の更新監視
 
 uv による依存解決には、[pyproject.toml](../pyproject.toml) の `exclude-newer` で公開後の待機期間を設けています。
-待機設定の導入で既存環境を巻き戻さないよう、一部の依存には確認済みの版の公開日時を上限とする一時例外があります。
-待機期間が満了した後は `exclude-newer-package` の該当する例外を解除し、lockfile を更新してください。
-例外が残っている間、その日時より後に公開された対象パッケージは選択されません。解除日は設定のコメントを参照してください。
+待機期間内の版が必要な場合は、`[tool.uv.exclude-newer-package]` に確認済みの版の公開日時を上限とする一時例外を追加し、解除日をコメントに残します。
+例外が残っている間、その日時より後に公開された対象パッケージは選択されません。待機期間が満了した後は例外を解除し、lockfile を更新してください。
 
 依存の更新漏れを防ぐため、毎週金曜 17:30 (Asia/Tokyo) に次の確認を行います。
 
@@ -123,6 +131,6 @@ uv による依存解決には、[pyproject.toml](../pyproject.toml) の `exclud
 Node.js の更新確認は開発用依存の Requests を使い、Tests と同じ `uv.lock` に従った環境で実行します。
 取得先は公式の HTTPS URL に固定し、証明書検証・タイムアウトを有効にします。リダイレクトは追従せず、環境由来の認証情報・CA・プロキシ設定は使用しません。
 
-定期実行は既定ブランチの `main` に workflow がある場合だけ起動し、`develop` の `mise.toml` を確認します。
+定期実行は既定ブランチの `develop` にある workflow から起動し、`develop` の `mise.toml` を確認します。
 手動実行では、選んだブランチの `mise.toml` を確認します。
 Tests でも同じ確認を行い、新しい版があれば失敗にせず警告を表示します。

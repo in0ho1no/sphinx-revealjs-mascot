@@ -54,15 +54,6 @@ exclude-newer = "7 days"
 # pyright は PATH 上の node が見つからないと nodeenv で Node.js を自動取得するため、mise で固定した版以外を使わせないよう除外する
 exclude-dependencies = ["nodeenv"]
 
-# 待機設定の導入で既存環境を巻き戻さないため、確認済みの配布物までを一時的に許可する。
-[tool.uv.exclude-newer-package]
-# certifi 2026.10.23: 2026-10-30 20:37 JST 以降に解除する。
-certifi = "2026-10-23T11:36:16.479Z"
-# Sphinx 9.2.0: 2026-10-28 09:06 JST 以降に解除する。
-sphinx = "2026-10-21T00:05:15.020Z"
-# sphinxcontrib-jsmath 2.0.0: 2026-10-28 03:23 JST 以降に解除する。
-sphinxcontrib-jsmath = "2026-10-20T18:22:05.515Z"
-
 [tool.ruff]
 # 1行の最大文字数
 line-length = 150
@@ -121,9 +112,6 @@ ignore = [
 "__init__.py" = ["F401"]
 # テストコードではクラス/メソッドごとの docstring を必須にしない
 "src/tests/**/*.py" = ["D101", "D102", "D103", "D415"]
-# docs/source/conf.py ファイルでは、E402 (モジュールレベルのimportがファイルの先頭にない) エラーを無視する
-# (sys.pathの変更後にimportを行う場合など)
-"docs/source/conf.py" = ["E402"]
 
 [tool.ruff.lint.pydocstyle]
 # docstringの規約としてGoogleスタイルを採用
@@ -150,10 +138,6 @@ disallow_untyped_defs = true
 no_implicit_optional = true
 # 型情報が提供されていないサードパーティライブラリのimportエラーを無視する
 ignore_missing_imports = true
-# Mypyの型チェック対象から除外するファイル/ディレクトリのパターン (正規表現)
-exclude = [
-    "docs/source/conf\\.py$", # . はエスケープ
-]
 
 [tool.pyright]
 # 型チェックの対象ディレクトリ
@@ -172,7 +156,6 @@ exclude = [
     "**/build",
     "**/dist",
     "**/node_modules",
-    "docs/source/conf.py",
 ]
 pythonVersion = "3.14"
 pythonPlatform = "All"

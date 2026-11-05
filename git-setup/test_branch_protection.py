@@ -101,7 +101,11 @@ class BranchProtectionTests(unittest.TestCase):
         main = json.loads((SETUP / "gh-MainProtection.json").read_text(encoding="utf-8"))
         develop = json.loads((SETUP / "gh-RequiredCI.json").read_text(encoding="utf-8"))
         self.assertEqual(main["name"], "MainProtection")
-        for ruleset, branch in ((main, "main"), (develop, "develop")):
+        self.assertEqual(develop["name"], "RequiredCI")
+        for ruleset, branch, required in (
+            (main, "main", ["semgrep", "gitleaks"]),
+            (develop, "develop", ["semgrep", "gitleaks", "tests"]),
+        ):
             self.assertEqual(ruleset["target"], "branch")
             self.assertEqual(ruleset["enforcement"], "active")
             self.assertEqual(ruleset["conditions"]["ref_name"], {
@@ -112,10 +116,7 @@ class BranchProtectionTests(unittest.TestCase):
             self.assertIn("deletion", rules)
             self.assertIn("non_fast_forward", rules)
             checks = rules["required_status_checks"]["parameters"]["required_status_checks"]
-            self.assertEqual(checks, [
-                {"context": "semgrep", "integration_id": 15368},
-                {"context": "gitleaks", "integration_id": 15368},
-            ])
+            self.assertEqual(checks, [{"context": check, "integration_id": 15368} for check in required])
         rules = {rule["type"]: rule for rule in main["rules"]}
         self.assertEqual(rules["pull_request"]["parameters"], {
             "required_approving_review_count": 0,
@@ -126,35 +127,30 @@ class BranchProtectionTests(unittest.TestCase):
         })
         self.assertNotIn("pull_request", {rule["type"] for rule in develop["rules"]})
         workflow = (ROOT / ".github" / "workflows" / "security-scan.yml").read_text(encoding="utf-8")
-        for event, branches in (("push", ["develop", "main"]), ("pull_request", ["develop", "main"])):
+        for event in ("push", "pull_request"):
             section = re.search(rf"(?m)^  {event}:\n    branches:\n((?:      - .+\n)+)", workflow)
             self.assertIsNotNone(section)
-            self.assertEqual(re.findall(r"(?m)^      - (.+)$", section.group(1)), branches)
+            self.assertEqual(re.findall(r"(?m)^      - (.+)$", section.group(1)), ["develop", "main"])
         for check in ("semgrep", "gitleaks"):
             self.assertRegex(workflow, rf"(?m)^    name: {check}$")
+        tests = (ROOT / ".github" / "workflows" / "tests.yml").read_text(encoding="utf-8")
+        self.assertRegex(tests, r"(?m)^    name: tests$")
 
     def test_dependabot_and_auto_merge_targets(self):
         config = (ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")
-        self.assertEqual(re.findall(r'(?m)^  - package-ecosystem:', config), [
-            "  - package-ecosystem:"
-        ] * 3)
-        self.assertEqual(re.findall(r'(?m)^    target-branch: "([^"]+)"$', config), [
-            "main", "main", "main"
-        ])
+        ecosystems = re.findall(r'(?m)^  - package-ecosystem: "([^"]+)"$', config)
+        self.assertEqual(ecosystems, ["github-actions", "uv", "docker", "docker"])
+        self.assertEqual(re.findall(r'(?m)^    target-branch: "([^"]+)"$', config), ["develop"] * len(ecosystems))
         workflow = (ROOT / ".github" / "workflows" / "auto-merge-security-tool-updates.yml").read_text(encoding="utf-8")
-        self.assertIn("if: github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main'", workflow)
+        self.assertRegex(workflow, r"(?m)^    if: github\.event\.pull_request\.base\.ref == 'develop'$")
         self.assertIn('docker/semgrep/Dockerfile|docker/gitleaks/Dockerfile)', workflow)
         self.assertIn('"$PR_AUTHOR" != "dependabot[bot]"', workflow)
         self.assertIn('"$PR_ACTOR" != "dependabot[bot]"', workflow)
 
 
-@unittest.skipUnless(os.name == "nt", "Windows is required for batch script tests")
 class WindowsBranchProtectionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        powershell = shutil.which("powershell.exe")
-        if powershell is None:
-            raise unittest.SkipTest("Windows PowerShell is required to build the gh mock")
         temporary = tempfile.TemporaryDirectory(prefix="branch protection ")
         cls.addClassCleanup(temporary.cleanup)
         cls.mock_dir = Path(temporary.name)
@@ -163,7 +159,7 @@ class WindowsBranchProtectionTests(unittest.TestCase):
         env = os.environ.copy()
         env.update(MOCK_SOURCE=str(source), MOCK_EXE=str(cls.mock_dir / "gh.exe"))
         result = subprocess.run(
-            [powershell, "-NoProfile", "-NonInteractive", "-Command",
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
              "$ErrorActionPreference = 'Stop'; "
              "Add-Type -TypeDefinition (Get-Content -Raw -LiteralPath $env:MOCK_SOURCE) "
              "-OutputAssembly $env:MOCK_EXE -OutputType ConsoleApplication"],
@@ -248,7 +244,8 @@ class WindowsBranchProtectionTests(unittest.TestCase):
             result, calls = self.run_windows(root=root)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             config = (root / ".github" / "dependabot.yml").read_text(encoding="utf-8")
-            self.assertEqual(config.count('target-branch: "develop"'), 3)
+            self.assertNotIn('target-branch: "main"', config)
+            self.assertEqual(config.count('target-branch: "develop"'), config.count("  - package-ecosystem:"))
             self.assertIn("commit", result.stdout)
             self.assertIn("push", result.stdout)
             self.assertIn("<default_branch=develop>", calls)
@@ -370,7 +367,11 @@ class WindowsBranchProtectionTests(unittest.TestCase):
                      "gh-RequiredCI.json", "gh-MainProtection.json"):
             shutil.copyfile(SETUP / name, setup / name)
         if with_config:
-            shutil.copyfile(ROOT / ".github" / "dependabot.yml", root / ".github" / "dependabot.yml")
+            # 設定適用前の状態として、テンプレートから作成した直後の main 宛てに戻す
+            config = (ROOT / ".github" / "dependabot.yml").read_bytes()
+            (root / ".github" / "dependabot.yml").write_bytes(
+                config.replace(b'target-branch: "develop"', b'target-branch: "main"')
+            )
         return root
 
     def run_updater(self, root):
