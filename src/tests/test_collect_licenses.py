@@ -3,7 +3,6 @@
 import hashlib
 import io
 import json
-from importlib.metadata import version
 from pathlib import Path
 
 import pytest
@@ -13,14 +12,19 @@ from sphinx_revealjs_mascot import notices as collect_licenses
 
 
 @pytest.fixture
-def notice_repository(tmp_path: Path) -> Path:
+def notice_repository(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / 'repository'
     notices = root / 'third_party'
     notices.mkdir(parents=True)
     (notices / 'NOTICES.txt').write_bytes(b'original notice\n')
     (notices / 'README.md').write_text('# Notices\n', encoding='utf-8')
+    static_assets = root / 'installed/sphinx_revealjs/_static/revealjs'
+    static_assets.mkdir(parents=True)
+    (static_assets / 'reveal.js').write_bytes(b'bundled reveal.js')
+    monkeypatch.setattr(collect_licenses, '_revealjs_static_path', lambda _: static_assets)
     manifest = {
-        'source_distribution': {'name': 'sphinx-revealjs', 'version': version('sphinx-revealjs')},
+        'source_distribution': {'name': 'sphinx-revealjs', 'version': '3.2.1'},
+        'static_assets_sha256': collect_licenses._tree_sha256(static_assets),
         'notice': {'path': 'NOTICES.txt', 'sha256': hashlib.sha256(b'original notice\n').hexdigest()},
         'components': [{'name': 'example'}],
     }
@@ -45,14 +49,30 @@ def test_unrelated_lock_update_does_not_invalidate_notices(notice_repository: Pa
     collect_licenses.verify(notice_repository)
 
 
-def test_asset_provider_update_prevents_export(notice_repository: Path, tmp_path: Path) -> None:
+def test_static_asset_hash_uses_portable_path_order(tmp_path: Path) -> None:
+    assets = tmp_path / 'assets'
+    (assets / 'css').mkdir(parents=True)
+    (assets / 'css/layout.scss').write_bytes(b'layout\n')
+    (assets / 'css-print.css').write_bytes(b'print\n')
+    (assets / 'LICENSE').write_bytes(b'license\n')
+
+    assert collect_licenses._tree_sha256(assets) == 'c05176e1391d86fb233740c893f25df8eab8fc8ca54f6ea2f2139d137f3748fd'
+
+
+def test_manifested_provider_version_does_not_block_unchanged_static_assets(notice_repository: Path) -> None:
     manifest_path = notice_repository / 'third_party/manifest.json'
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    manifest['source_distribution']['version'] = '0.0.0'
+    manifest['source_distribution']['version'] = '9.9.9'
     manifest_path.write_text(json.dumps(manifest), encoding='utf-8')
+
+    collect_licenses.verify(notice_repository)
+
+
+def test_changed_static_assets_prevent_export(notice_repository: Path, tmp_path: Path) -> None:
+    (notice_repository / 'installed/sphinx_revealjs/_static/revealjs/reveal.js').write_bytes(b'updated reveal.js')
     destination = tmp_path / 'output'
 
-    with pytest.raises(ValueError, match='同梱素材の通知を再確認'):
+    with pytest.raises(ValueError, match='同梱素材が更新されています'):
         collect_licenses.export_notices(notice_repository, destination)
 
     assert not destination.exists()
