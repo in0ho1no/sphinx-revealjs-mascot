@@ -30,7 +30,7 @@ slides/
 本拡張を使わない場合は、`extensions` の `sphinx_revealjs_mascot` を `sphinx_revealjs` に置き換え、`mascot` 系のディレクティブとキャラクター用の余白を取り除く。
 
 環境には本拡張、Sphinx、sphinx-revealjs、Markdown 用の MyST-Parser が必要である。
-本拡張 0.1.1 の Python 要件は3.14以上。利用先の依存管理を確認し、不足する依存を無断で追加しない。
+本拡張 0.1.2 の Python 要件は3.14以上。利用先の依存管理を確認し、不足する依存を無断で追加しない。
 MyST-Parser は本拡張の実行時依存には含まれない。拡張は提供された wheel などから導入し、PyPI での公開を前提にしない。
 
 雛形の `conf.py` は日本語、ローカル CSS、1280×720のスライド基準寸法、発表者ノート用のプラグインを設定する。

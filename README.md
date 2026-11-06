@@ -13,7 +13,7 @@ CSS・JavaScript・標準画像を自動で組み込み、スライドや fragme
 Python 要件と実行時依存は wheel のメタデータに含まれます。ソースから wheel を作成する手順は [配布パッケージの作成](docs/development.md#distribution-build) を参照してください。
 
 ```sh
-uv add /path/to/sphinx_revealjs_mascot-0.1.1-py3-none-any.whl
+uv add /path/to/sphinx_revealjs_mascot-0.1.2-py3-none-any.whl
 ```
 
 利用先の `conf.py` で拡張を有効にします。`sphinx_revealjs` は本拡張から読み込みます。
