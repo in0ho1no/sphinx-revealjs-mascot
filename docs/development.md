@@ -115,6 +115,48 @@ Python 要件と実行時依存は wheel のメタデータに含まれます。
 自動テストでは wheel を一時フォルダへ展開し、チェックアウトを参照せずに標準画像・独自画像それぞれの Sphinx ビルドを確認します。
 別環境へのインストールとブラウザでの実表示は、このテストの対象外です。
 
+### Release のアップロード失敗からの復旧 <a id="release-recovery"></a>
+
+Assets のアップロードが途中で失敗すると、空または一部の配布物だけを持つ draft Release が残ることがあります。
+workflow を再実行しても `gh release create` は既存 Release を補完しないため、Release やタグを削除・作り直さず、既存 draft に不足分をアップロードします。
+以下の `v0.1.1` とファイル名は対象バージョンに置き換えます。失敗した workflow の終了を確認し、復旧中は他のアップロードや Release の公開を行わないでください。各コマンドが成功したことを確認してから次へ進みます。
+
+まず、Release を編集できるアカウントで対象タグ・draft 状態・既存 Assets を確認します。
+`draft` が `true` でない場合や、状態を確認できない場合は中断し、公開済み Release を変更しないでください。
+
+```sh
+gh api repos/in0ho1no/sphinx-revealjs-mascot/releases/tags/v0.1.1 --jq '{tag: .tag_name, draft: .draft, assets: [.assets[] | {name, state, size}]}'
+```
+
+作業中のチェックアウトではなく、別のクリーンなチェックアウトで対象タグを checkout します。
+
+```sh
+git checkout --detach v0.1.1
+git rev-parse HEAD
+```
+
+出力された commit SHA が失敗した workflow の checkout ログと一致することを確認してから、配布物を再ビルドします。タグがその後に移動されていた場合や、SHA が一致しない場合は中断します。
+
+```sh
+uv sync --locked
+uv build --offline --no-build-isolation
+```
+
+既存 Assets の一覧と照合し、不足しているファイルだけを指定します。次は wheel だけが不足している場合の例です。sdist が不足している場合は該当する `.tar.gz` を指定し、両方が不足している場合は両方を指定します。
+
+```sh
+gh release upload v0.1.1 dist/sphinx_revealjs_mascot-0.1.1-py3-none-any.whl --repo in0ho1no/sphinx-revealjs-mascot
+```
+
+同名 Asset がアップロード未完了の状態 (`state` が `uploaded` でない) で残っている場合に限り、該当ファイルだけを指定して `--clobber` を付けます。
+このオプションは同名 Asset を削除してから再アップロードするため、アップロード済みの正常な Asset には使用しません。再度失敗した場合も中断し、状態を確認してから復旧を続けます。
+
+最後に最初のコマンドで wheel と sdist の両方が `uploaded` 状態であることを確認し、新しい空のフォルダへダウンロードできることを確認します。両方の確認が完了するまで Release は draft のままにします。
+
+```sh
+gh release download v0.1.1 --repo in0ho1no/sphinx-revealjs-mascot --pattern '*.whl' --pattern '*.tar.gz' --dir release-verify
+```
+
 ## 依存の更新監視
 
 uv による依存解決には、[pyproject.toml](../pyproject.toml) の `exclude-newer` で公開後の待機期間を設けています。
