@@ -21,6 +21,13 @@ jobs:
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - name: Install dependencies
         run: uv sync --locked
+      - name: Verify tag matches project version
+        run: |
+          version="$(uv version --short)"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::タグ $GITHUB_REF_NAME が pyproject.toml のバージョン $version と一致しません。"
+            exit 1
+          fi
       - name: Build wheel and source distribution
         run: uv build --offline --no-build-isolation
       - name: Create draft GitHub Release
