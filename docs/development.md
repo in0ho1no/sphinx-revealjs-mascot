@@ -42,8 +42,8 @@ pull request と `develop` への push では、[Tests](../.github/workflows/tes
 `tests` は `develop` の必須チェックです。`main` は pull request 経由のマージと、`semgrep`・`gitleaks` のチェックを必須にしています。
 `semgrep`・`gitleaks` は、[Security Scan](../.github/workflows/security-scan.yml) が `develop` と `main` への pull request・push で実行します。
 必須チェックの設定は `develop` を [gh-RequiredCI.json](../git-setup/gh-RequiredCI.json)、`main` を [gh-MainProtection.json](../git-setup/gh-MainProtection.json) を正本とし、[gh-enable-push-protection-win.bat](../git-setup/gh-enable-push-protection-win.bat) で GitHub に反映します。
-`main` への push では、[Build](../.github/workflows/build.yml) が wheel とソース配布物のビルドを確認します。
-成果物は Actions の artifact に保存せず、PyPI にも公開しません。
+`main` への push では、[Build](../.github/workflows/build.yml) が wheel とソース配布物のビルドを確認しますが、成果物は保存しません。
+`v` で始まるタグへの push では、[Release](../.github/workflows/release.yml) がタグのコミットから配布物をビルドし、draft GitHub Release に添付します。公開前はリポジトリへのアクセス権がある人だけが取得できます。PyPI への公開は行いません。
 
 GitHub 設定スクリプトのテスト [test_branch_protection.py](../git-setup/test_branch_protection.py) は Windows 専用のため、`uv run pytest` と CI の対象に含めていません。
 `git-setup/` のスクリプト、Ruleset、Dependabot、関連する workflow を変更した場合は、Windows で次を実行します。
