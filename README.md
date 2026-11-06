@@ -75,3 +75,9 @@ uv run --frozen --no-sync --offline sphinx-build -W -b revealjs -c examples -D r
 | [実装・検証の記録](docs/Plan.md) | 設計判断と自動テスト・ブラウザ確認の範囲 |
 | [共通指示](AGENTS.md) | 作業規約と Python・Markdown の規約への参照 |
 | [AI 開発環境](docs/ai-environment.md) | 各 AI ツールの入口、SKILL の持ち運び、フックの配置と検証 |
+
+## リリース
+
+`pyproject.toml` のバージョンに対応する `v` で始まるタグ (例: `v0.1.1`) を push すると、GitHub Actions がタグのコミットから wheel とソース配布物をビルドし、両方を draft GitHub Release に添付します。
+Release を公開するまでは、リポジトリへのアクセス権がある人だけが配布物を取得できます。PyPI への公開は行いません。
+Assets のアップロードに失敗した場合は、[Release の復旧手順](docs/development.md#release-recovery) に従って既存の draft Release を補完します。
