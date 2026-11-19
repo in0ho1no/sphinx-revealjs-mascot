@@ -8,9 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from sphinx_revealjs_mascot.config import STATES
+from sphinx_revealjs_mascot.config import OPTIONAL_STATES, REQUIRED_STATES
 
 _REPOSITORY = Path(__file__).resolve().parents[2]
+_STANDARD_IMAGES = 'examples/_static/mascot/joubitaki'
+_STANDARD_FILES = [f'{state}.png' for state in REQUIRED_STATES + OPTIONAL_STATES] + ['README.md']
 
 
 @pytest.fixture(scope='module')
@@ -34,18 +36,15 @@ def test_wheel_and_sdist_preserve_assets_and_original_notices(artifacts: tuple[P
     wheel, sdist = artifacts
     package = 'sphinx_revealjs_mascot'
     with zipfile.ZipFile(wheel) as archive:
-        for state in STATES:
-            assert (
-                archive.read(f'{package}/static/sphinx-revealjs-mascot/images/{state}.png')
-                == (_REPOSITORY / f'examples/_static/mascot/joubitaki/{state}.png').read_bytes()
-            )
+        for name in _STANDARD_FILES:
+            assert archive.read(f'{package}/static/sphinx-revealjs-mascot/images/{name}') == (_REPOSITORY / _STANDARD_IMAGES / name).read_bytes()
         for name in ['README.md', 'manifest.json', 'NOTICES.txt']:
             assert archive.read(f'{package}/third_party/{name}') == (_REPOSITORY / 'third_party' / name).read_bytes()
         assert archive.read(f'{package}/static/sphinx-revealjs-mascot/LICENSE') == (_REPOSITORY / 'LICENSE').read_bytes()
         assert not any('/tests/' in name or '/scripts/' in name for name in archive.namelist())
     with tarfile.open(sdist) as archive:
         prefix = archive.getnames()[0].split('/')[0]
-        for relative in ['pyproject.toml', 'docs/SPEC.md', 'third_party/NOTICES.txt', 'examples/_static/mascot/joubitaki/normal.png']:
+        for relative in ['pyproject.toml', 'docs/SPEC.md', 'third_party/NOTICES.txt', *(f'{_STANDARD_IMAGES}/{name}' for name in _STANDARD_FILES)]:
             member = archive.extractfile(f'{prefix}/{relative}')
             assert member is not None
             assert member.read() == (_REPOSITORY / relative).read_bytes()
@@ -63,9 +62,9 @@ def test_extracted_wheel_builds_without_repository_imports(artifacts: tuple[Path
     if custom:
         images = source / 'pictures'
         images.mkdir()
-        for index, state in enumerate(STATES):
-            original_state = STATES[(index + 1) % len(STATES)]
-            (images / f'custom_{state}.png').write_bytes((_REPOSITORY / f'examples/_static/mascot/joubitaki/{original_state}.png').read_bytes())
+        for index, state in enumerate(REQUIRED_STATES):
+            original_state = REQUIRED_STATES[(index + 1) % len(REQUIRED_STATES)]
+            (images / f'custom_{state}.png').write_bytes((_REPOSITORY / _STANDARD_IMAGES / f'{original_state}.png').read_bytes())
         config += "revealjs_mascot_image_dir = 'pictures'\nrevealjs_mascot_image_pattern = 'file-name_{state}.png'\n"
     (source / 'conf.py').write_text(config, encoding='utf-8')
     (source / 'index.rst').write_text('Package\n=======\n\nSlide\n-----\n\n.. mascot::\n   :position: top-left\n\nText.\n', encoding='utf-8')
@@ -95,6 +94,8 @@ def test_extracted_wheel_builds_without_repository_imports(artifacts: tuple[Path
     asset_dir = output / '_static/sphinx-revealjs-mascot'
     assert (asset_dir / 'LICENSE').read_bytes() == (_REPOSITORY / 'LICENSE').read_bytes()
     assert (asset_dir / 'STANDARD-IMAGES.md').is_file()
-    for state in STATES:
-        original = source / f'pictures/custom_{state}.png' if custom else _REPOSITORY / f'examples/_static/mascot/joubitaki/{state}.png'
+    states = REQUIRED_STATES if custom else REQUIRED_STATES + OPTIONAL_STATES
+    for state in states:
+        original = source / f'pictures/custom_{state}.png' if custom else _REPOSITORY / _STANDARD_IMAGES / f'{state}.png'
         assert (asset_dir / f'images/{state}.png').read_bytes() == original.read_bytes()
+    assert {path.name for path in (asset_dir / 'images').glob('*.png')} == {f'{state}.png' for state in states}
