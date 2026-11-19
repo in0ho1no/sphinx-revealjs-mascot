@@ -6,9 +6,14 @@ import sys
 from dataclasses import asdict
 from html.parser import HTMLParser
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
+from sphinx.application import Sphinx
+from sphinx.environment import BuildEnvironment
 
+import sphinx_revealjs_mascot as mascot
 from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, OPTIONAL_STATES, REQUIRED_STATES
 
 _REPOSITORY = Path(__file__).resolve().parents[2]
@@ -86,3 +91,29 @@ def test_minimal_build_includes_local_assets_and_notices(tmp_path: Path, builder
             assert (page.parent / url).read_bytes() == original.read_bytes()
     assert (output / 'third_party/NOTICES.txt').read_bytes() == (_REPOSITORY / 'third_party/NOTICES.txt').read_bytes()
     assert {path.name for path in (output / 'third_party').iterdir()} == {'README.md', 'manifest.json', 'NOTICES.txt'}
+
+
+@pytest.mark.parametrize(
+    ('previous', 'current', 'builder', 'reread'),
+    [
+        (None, REQUIRED_STATES, 'revealjs', False),
+        (REQUIRED_STATES, REQUIRED_STATES, 'revealjs', False),
+        ((*REQUIRED_STATES, 'badge'), REQUIRED_STATES, 'revealjs', False),
+        ((*REQUIRED_STATES, 'happy'), REQUIRED_STATES, 'revealjs', True),
+        (REQUIRED_STATES, (*REQUIRED_STATES, 'happy'), 'dirrevealjs', True),
+        ((*REQUIRED_STATES, 'happy'), REQUIRED_STATES, 'html', False),
+    ],
+)
+def test_changed_image_states_reread_every_page(
+    tmp_path: Path, previous: tuple[str, ...] | None, current: tuple[str, ...], builder: str, reread: bool
+) -> None:
+    destination = tmp_path / '_static/sphinx-revealjs-mascot/images'
+    if previous is not None:
+        destination.mkdir(parents=True)
+        for name in previous:
+            (destination / f'{name}.png').write_bytes(b'')
+    settings = SimpleNamespace(images={state: tmp_path / f'{state}.png' for state in current})
+    env = SimpleNamespace(domaindata={'sphinx-revealjs-mascot': {'settings': settings}}, found_docs={'nested/second', 'index'})
+    app = SimpleNamespace(outdir=str(tmp_path), builder=SimpleNamespace(name=builder), env=env)
+    docs = mascot._outdated_by_images(cast(Sphinx, app), cast(BuildEnvironment, env), set(), set(), set())
+    assert docs == (['index', 'nested/second'] if reread else [])

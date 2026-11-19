@@ -1,6 +1,6 @@
 """スライド設定と、内容をまとめて表示する fragment を定義する。"""
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from typing import NoReturn
 
 from docutils import nodes
@@ -72,6 +72,16 @@ class MascotFragmentDirective(SphinxDirective):
         self.set_source_info(node)
         self.state.nested_parse(self.content, self.content_offset, node)
         return [node]
+
+
+def check_action_images(doctree: nodes.document, docname: str, states: Collection[str]) -> None:
+    """解決されていない状態画像を使うアクションの指定をビルドエラーにする。"""
+    for node in [*doctree.findall(MascotSettings), *doctree.findall(MascotFragment)]:
+        action = node.get('action' if isinstance(node, MascotSettings) else 'data-mascot-action')
+        if action is None or ACTIONS[action].image in states:
+            continue
+        image = ACTIONS[action].image
+        raise ExtensionError(f'{docname}:{node.line}: アクション {action!r} には状態画像 {image!r} が必要です。画像フォルダに追加してください')
 
 
 def apply_slide_settings(app: Sphinx, doctree: nodes.document, docname: str) -> None:
