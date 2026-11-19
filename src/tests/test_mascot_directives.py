@@ -103,6 +103,13 @@ def test_existing_samples_embed_slide_settings_and_grouped_fragments(tmp_path: P
     fragments.feed((tmp_path / 'output/fragments.html').read_text(encoding='utf-8'))
     assert [fragment['action'] for fragment in fragments.fragments] == ['surprise', 'jump', None, 'wink']
     assert fragments.fragments[2]['items'] == 2
+    actions = _Markup()
+    actions.feed((tmp_path / 'output/actions.html').read_text(encoding='utf-8'))
+    configured = [section for section in actions.sections if 'data-mascot-action' in section]
+    assert [section['data-mascot-action'] for section in configured] == ['tilt', 'trouble', 'proud', 'happy']
+    assert [section.get('data-mascot-position') for section in configured] == ['top-right', 'bottom-left', None, 'top-left']
+    assert [fragment['action'] for fragment in actions.fragments] == ['proud', 'tilt']
+    assert set(json.loads(actions.config)['actions']) >= {'happy', 'tilt', 'trouble', 'proud'}
 
 
 @pytest.fixture
