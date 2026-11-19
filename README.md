@@ -5,6 +5,7 @@ CSS・JavaScript・標準画像を自動で組み込み、スライドや fragme
 
 - スライドごとの表示位置と、位置に応じた向きの切り替え
 - 待機モーション、リアクション、ウトウトと復帰
+- 喜ぶ・首をかしげる・困る・得意げにする追加のリアクション（独自キャラクターでは対応する画像を置いた場合だけ有効）
 - キーによる表示・非表示の切り替え、独自キャラクターへの差し替え
 
 ## 拡張を利用する <a id="extension-usage"></a>
@@ -13,7 +14,7 @@ CSS・JavaScript・標準画像を自動で組み込み、スライドや fragme
 Python 要件と実行時依存は wheel のメタデータに含まれます。ソースから wheel を作成する手順は [配布パッケージの作成](docs/development.md#distribution-build) を参照してください。
 
 ```sh
-uv add /path/to/sphinx_revealjs_mascot-0.1.2-py3-none-any.whl
+uv add /path/to/sphinx_revealjs_mascot-0.1.3-py3-none-any.whl
 ```
 
 利用先の `conf.py` で拡張を有効にします。`sphinx_revealjs` は本拡張から読み込みます。

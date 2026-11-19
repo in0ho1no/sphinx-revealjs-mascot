@@ -6,6 +6,7 @@
 fragments
 minimal/index
 positions
+actions
 ```
 
 ## ジャンプで始める

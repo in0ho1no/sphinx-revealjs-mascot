@@ -6,13 +6,23 @@ import pytest
 from sphinx.config import Config
 from sphinx.errors import ConfigError
 
-from sphinx_revealjs_mascot.config import CONFIG_DEFAULTS, IMAGE_PATTERNS, STATES, parse_position, resolve_images, resolve_settings
+from sphinx_revealjs_mascot.config import (
+    CONFIG_DEFAULTS,
+    IMAGE_PATTERNS,
+    OPTIONAL_STATES,
+    REQUIRED_STATES,
+    parse_position,
+    resolve_images,
+    resolve_settings,
+)
+
+_PATTERN_CASES = [(IMAGE_PATTERNS[0], '', False), (IMAGE_PATTERNS[1], 'bird', False), (IMAGE_PATTERNS[2], 'bird', True)]
 
 
-def _image_set(directory: Path, common: str = '', suffix: bool = False) -> dict[str, Path]:
+def _image_set(directory: Path, common: str = '', suffix: bool = False, states: tuple[str, ...] = REQUIRED_STATES) -> dict[str, Path]:
     directory.mkdir(parents=True, exist_ok=True)
     paths = {}
-    for state in STATES:
+    for state in states:
         name = f'{state}_{common}' if suffix else f'{common}_{state}'
         path = directory / (f'{name}.png' if common else f'{state}.png')
         path.write_bytes(f'image: {state}, {common}'.encode())
@@ -43,13 +53,35 @@ def test_invalid_position_is_rejected(value: object) -> None:
         parse_position(value)
 
 
-@pytest.mark.parametrize(
-    ('pattern', 'common', 'suffix'), [(IMAGE_PATTERNS[0], '', False), (IMAGE_PATTERNS[1], 'bird', False), (IMAGE_PATTERNS[2], 'bird', True)]
-)
+@pytest.mark.parametrize(('pattern', 'common', 'suffix'), _PATTERN_CASES)
 def test_image_set_is_detected_for_each_pattern(tmp_path: Path, pattern: str, common: str, suffix: bool) -> None:
     expected = _image_set(tmp_path, common, suffix)
     (tmp_path / 'unrelated.png').write_bytes(b'other')
     assert resolve_images(tmp_path, pattern) == expected
+
+
+@pytest.mark.parametrize('optional', [('happy',), ('tilt', 'proud'), OPTIONAL_STATES])
+@pytest.mark.parametrize(('pattern', 'common', 'suffix'), _PATTERN_CASES)
+def test_optional_images_with_the_same_naming_are_added(tmp_path: Path, pattern: str, common: str, suffix: bool, optional: tuple[str, ...]) -> None:
+    expected = _image_set(tmp_path, common, suffix) | _image_set(tmp_path, common, suffix, optional)
+    (tmp_path / 'unrelated.png').write_bytes(b'other')
+    images = resolve_images(tmp_path, pattern)
+    assert images == expected
+    assert list(images) == [state for state in REQUIRED_STATES + OPTIONAL_STATES if state in expected]
+
+
+@pytest.mark.parametrize('suffix', [False, True])
+def test_optional_images_with_another_common_name_are_ignored(tmp_path: Path, suffix: bool) -> None:
+    expected = _image_set(tmp_path, 'bird', suffix)
+    _image_set(tmp_path, 'dog', suffix, OPTIONAL_STATES)
+    assert resolve_images(tmp_path, IMAGE_PATTERNS[2 if suffix else 1]) == expected
+
+
+def test_optional_images_do_not_change_missing_image_errors(tmp_path: Path) -> None:
+    (tmp_path / 'bird_normal.png').write_bytes(b'normal')
+    _image_set(tmp_path, 'dog', False, OPTIONAL_STATES)
+    with pytest.raises(ConfigError, match=r'必要な画像が不足しています: .*: blink, sleepy, surprise。候補: bird_normal\.png$'):
+        resolve_images(tmp_path, IMAGE_PATTERNS[1])
 
 
 def test_missing_images_are_not_replaced_by_standard_images(tmp_path: Path) -> None:
@@ -58,18 +90,25 @@ def test_missing_images_are_not_replaced_by_standard_images(tmp_path: Path) -> N
         resolve_images(tmp_path, IMAGE_PATTERNS[0])
 
 
+@pytest.mark.parametrize('with_optional', [False, True])
 @pytest.mark.parametrize('suffix', [False, True])
-def test_multiple_complete_image_sets_are_rejected(tmp_path: Path, suffix: bool) -> None:
+def test_multiple_complete_image_sets_are_rejected(tmp_path: Path, suffix: bool, with_optional: bool) -> None:
     _image_set(tmp_path, 'bird', suffix)
     _image_set(tmp_path, 'dog', suffix)
+    if with_optional:
+        _image_set(tmp_path, 'bird', suffix, OPTIONAL_STATES)
     with pytest.raises(ConfigError, match='画像セットが複数見つかりました'):
         resolve_images(tmp_path, IMAGE_PATTERNS[2 if suffix else 1])
 
 
-def test_mixed_common_names_show_candidate_files(tmp_path: Path) -> None:
+@pytest.mark.parametrize('with_optional', [False, True])
+def test_mixed_common_names_show_candidate_files(tmp_path: Path, with_optional: bool) -> None:
     (tmp_path / 'bird_normal.png').write_bytes(b'normal')
     (tmp_path / 'dog_blink.png').write_bytes(b'blink')
-    with pytest.raises(ConfigError, match=r'共通のfile-name.*bird_normal\.png.*dog_blink\.png'):
+    if with_optional:
+        _image_set(tmp_path, 'bird', False, OPTIONAL_STATES)
+        _image_set(tmp_path, 'cat', False, ('happy',))
+    with pytest.raises(ConfigError, match=r'共通のfile-nameで揃っていません: .*: bird_normal\.png, dog_blink\.png$'):
         resolve_images(tmp_path, IMAGE_PATTERNS[1])
 
 

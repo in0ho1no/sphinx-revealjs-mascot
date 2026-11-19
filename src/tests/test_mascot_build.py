@@ -6,10 +6,15 @@ import sys
 from dataclasses import asdict
 from html.parser import HTMLParser
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
+from sphinx.application import Sphinx
+from sphinx.environment import BuildEnvironment
 
-from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, STATES
+import sphinx_revealjs_mascot as mascot
+from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, OPTIONAL_STATES, REQUIRED_STATES
 
 _REPOSITORY = Path(__file__).resolve().parents[2]
 
@@ -80,9 +85,45 @@ def test_minimal_build_includes_local_assets_and_notices(tmp_path: Path, builder
         config = json.loads(resources.config)
         assert config['defaultActions'] == DEFAULT_ACTIONS
         assert config['actions'] == {name: asdict(definition) for name, definition in ACTIONS.items()}
-        assert set(config['images']) == set(STATES)
+        assert list(config['images']) == list(REQUIRED_STATES + OPTIONAL_STATES)
         for state, url in config['images'].items():
             original = _REPOSITORY / 'examples/_static/mascot/joubitaki' / f'{state}.png'
             assert (page.parent / url).read_bytes() == original.read_bytes()
     assert (output / 'third_party/NOTICES.txt').read_bytes() == (_REPOSITORY / 'third_party/NOTICES.txt').read_bytes()
     assert {path.name for path in (output / 'third_party').iterdir()} == {'README.md', 'manifest.json', 'NOTICES.txt'}
+    assert json.loads((output / '.sphinx-revealjs-mascot.json').read_text(encoding='utf-8')) == {'states': list(REQUIRED_STATES + OPTIONAL_STATES)}
+
+
+def _record(states: tuple[str, ...]) -> str:
+    return json.dumps({'states': list(states)})
+
+
+@pytest.mark.parametrize(
+    ('record', 'current', 'builder', 'reread'),
+    [
+        (None, REQUIRED_STATES, 'revealjs', True),
+        (None, REQUIRED_STATES, 'html', False),
+        (_record(REQUIRED_STATES), REQUIRED_STATES, 'revealjs', False),
+        (_record((*REQUIRED_STATES, 'happy')), REQUIRED_STATES, 'revealjs', True),
+        (_record(REQUIRED_STATES), (*REQUIRED_STATES, 'happy'), 'dirrevealjs', True),
+        (_record((*REQUIRED_STATES, 'happy')), REQUIRED_STATES, 'html', False),
+        ('{', REQUIRED_STATES, 'revealjs', True),
+        ('{"states": "normal"}', REQUIRED_STATES, 'revealjs', True),
+    ],
+)
+def test_changed_image_states_reread_every_page(tmp_path: Path, record: str | None, current: tuple[str, ...], builder: str, reread: bool) -> None:
+    # 出力先の画像を現在の構成と揃え、判定が残った画像ではなく記録に基づくことを確かめる。
+    destination = tmp_path / '_static/sphinx-revealjs-mascot/images'
+    destination.mkdir(parents=True)
+    for state in current:
+        (destination / f'{state}.png').write_bytes(b'')
+    record_path = tmp_path / '.sphinx-revealjs-mascot.json'
+    if record is not None:
+        record_path.write_text(record, encoding='utf-8')
+    settings = SimpleNamespace(images={state: tmp_path / f'{state}.png' for state in current})
+    env = SimpleNamespace(domaindata={'sphinx-revealjs-mascot': {'settings': settings}}, found_docs={'nested/second', 'index'})
+    app = SimpleNamespace(outdir=str(tmp_path), builder=SimpleNamespace(name=builder), env=env)
+    docs = mascot._outdated_by_images(cast(Sphinx, app), cast(BuildEnvironment, env), set(), set(), set())
+    assert docs == (['index', 'nested/second'] if reread else [])
+    # 全ページを読み直すときは、書き出しが中断しても次回に読み直すよう記録を取り除く。
+    assert record_path.is_file() == (record is not None and not reread)
