@@ -2,129 +2,160 @@
 
 ## 1. 背景と目的
 
-[`sphinx-revealjs-mascot`](https://github.com/in0ho1no/sphinx-revealjs-mascot) の現行仕様（[`docs/SPEC.md`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/docs/SPEC.md)）では、1体のキャラクターに対して4つの基本状態画像（`normal`, `blink`, `sleepy`, `surprise`）を差し替え、スライド遷移・fragment 表示・無操作タイマーに応じたリアクションを表現している。
+現行の [仕様書](SPEC.md) では、1体のキャラクターに4つの基本状態画像（`normal`・`blink`・`sleepy`・`surprise`）を差し替え、スライド遷移・fragment 表示・無操作タイマーに応じたリアクションを表現している。
 
-本仕様は、導入時の手軽さを損なわないよう**既定の必須画像を従来の4枚のまま維持**しつつ、利用者が追加の状態画像を配置した場合にのみ新たな表情とリアクションを有効化する「オプション状態・追加アクション機構」を定義するものである。
+本仕様は、導入時の手軽さを損なわないよう既定の必須画像を4枚のまま維持しつつ、利用者が追加の状態画像を配置した場合にだけ新たな表情とリアクションを有効にする仕組みを定義する。
+このブランチでの作業が一通り終わった時点で、本書の内容を [仕様書](SPEC.md) へ統合する。
 
 ## 2. 前提・基本方針
 
-1. **必須画像は4枚のまま据え置き**: 標準同梱画像およびカスタム画像利用時の必須要件は従来の4枚（`normal`, `blink`, `sleepy`, `surprise`）から増やさない。4枚のみを配置した環境では従来と完全に同一の動作とし、後方互換性を保つ。
-2. **追加画像はオプション扱い（部分配置の許容）**: オプション状態画像（`happy`, `tilt`, `trouble`, `proud`）は、画像ディレクトリ内に対応するファイルが存在する場合のみ個別に有効化する。追加画像が0枚の構成、必要な1〜3枚だけを追加した構成（5〜7枚）、全4枚を追加した構成（8枚）のいずれでも動作する。
-3. **1体表示アーキテクチャの維持**: 複数キャラクターの同時表示は行わず、単一の `#chara`（`img#chara-img`）の画像差し替えと CSS モーションの組み合わせで表現する。
-4. **厳格なビルド時検証の維持**: 対応するオプション画像が未配置であるにもかかわらず、スライド原稿のディレクティブでそのアクションを明示指定した場合は、警告ではなくビルドエラーとする。
+1. 必須画像は4枚のまま据え置く。標準画像・独自画像のどちらでも必須の要件は増やさず、4枚だけを配置した環境では従来と同一の動作とする。
+2. 追加画像は任意とし、部分的な配置を許容する。追加状態（`happy`・`tilt`・`trouble`・`proud`）は、対応するファイルがある状態だけを個別に有効にする。追加画像が0枚・1〜3枚・4枚のいずれの構成でも動作する。
+3. 1体表示の構成を維持する。複数キャラクターの同時表示は行わず、`img#chara-img` の画像差し替えと CSS モーションの組み合わせで表現する。
+4. 厳格なビルド時検証を維持する。対応する追加画像がないアクションをディレクティブで明示指定した場合は、警告ではなくビルドエラーとする。
+5. 画像は1つのフォルダから読み込む。必須画像と追加画像を別のフォルダで管理する場合は、利用者がビルド前に1つのフォルダへ組み立てる。必須画像のフォルダへ追加画像を直接置く使い方もあるため、追加画像専用のフォルダを指定する設定は設けない。本リポジトリのサンプルとテストも同じ方式とする。
+6. 本書で変更を明記した事項を除き、[仕様書](SPEC.md) と [実装・検証の記録](Plan.md) の設計判断を踏襲する。特に、リアクションの優先順位、値の正本を `config.py` に集約する方針、モーションの最大変位から余白を計算する方針を変えない。
 
 ## 3. キャラクター画像の要件
 
-### 3.1 状態の区分（必須状態とオプション状態）
+### 3.1 状態の区分（必須状態と追加状態）
 
-キャラクターの状態識別子は、必須4状態（`REQUIRED_STATES`）とオプション4状態（`OPTIONAL_STATES`）に分類する。
+状態の識別子は、必須4状態（`REQUIRED_STATES`）と追加4状態（`OPTIONAL_STATES`）に分ける。
 
-| 状態の識別子 | 区分 | 画像・ポーズの表現例（小鳥キャラクターの場合） | 主な用途 |
-| :--- | :--- | :--- | :--- |
-| `normal` | **必須** | 通常の立ち姿（起きている状態） | 待機（`idle`）、ジャンプ（`jump`） |
-| `blink` | **必須** | 目を閉じた立ち姿 | 定期まばたき、ウインク（`wink`） |
-| `sleepy` | **必須** | 眠そうな姿・目を閉じてうつむく姿 | 無操作時の居眠り（`doze`） |
-| `surprise` | **必須** | 目を丸くして驚いた姿 | 驚き（`surprise`）、居眠りからの復帰（`wake`） |
-| `happy` | オプション | 目を細めた笑顔で、両翼を広げて喜ぶ姿 | 感謝、祝福、節目の喜び、明るい結論 |
-| `tilt` | オプション | 首をコテンと大きく傾げた姿 | 問いかけ、課題提起、疑問の導入 |
-| `trouble` | オプション | 羽を落として困った表情になり、汗粒が浮かぶ姿 | 失敗談、苦労話、トラブルの紹介 |
-| `proud` | オプション | 胸を張ってキリッとした目つきになる姿 | 工夫した解決策の提示、達成のアピール、決意表明 |
+| 状態の識別子 | 区分 | 表す状態 | 主な用途 |
+| --- | --- | --- | --- |
+| `normal` | 必須 | 通常 | 待機（`idle`）、跳ねる（`jump`） |
+| `blink` | 必須 | 両目を閉じた状態 | まばたき、`wink` |
+| `sleepy` | 必須 | 眠そうな状態 | ウトウト（`doze`） |
+| `surprise` | 必須 | 驚いた状態 | `surprise`、ウトウトからの復帰（`wake`） |
+| `happy` | 追加 | 喜んでいる状態 | 感謝、祝福、節目の喜び、明るい結論 |
+| `tilt` | 追加 | 首をかしげた状態 | 問いかけ、課題提起、疑問の導入 |
+| `trouble` | 追加 | 困っている状態 | 失敗談、苦労話、トラブルの紹介 |
+| `proud` | 追加 | 得意げな状態 | 工夫した解決策の提示、達成のアピール、決意表明 |
 
-### 3.2 オプション画像の品質・制作指針
+サンプル画像での具体的な表情・ポーズは、画像フォルダの説明に記載する。
 
-- **外形シルエットによる識別性**: 既定の表示幅（画面幅の `16%`）でも変化が伝わるよう、目の描き込みだけでなく「両翼を上げる（`happy`）」「首を傾ける（`tilt`）」「前かがみになる（`trouble`）」「胸を反らす（`proud`）」など外形シルエット自体に差をつける。
-- **左右反転（`scaleX(-1)`）への配慮**: 右側配置（`x` 座標が `50%` 超）では `.facing` 要素に水平反転がかかるため、画像内に「？」などの非対称な文字記号を直接描き込むと鏡文字になる。画像内に含める漫符は汗粒やキラキラなど左右反転しても違和感のない図形にとどめる。
-- **キャンバス仕様の統一**: 既存の必須4枚と同一のアスペクト比・キャンバスサイズ・足元基準位置・背景透過 PNG で統一する。
+### 3.2 追加画像の品質・制作指針
 
-### 3.3 ファイル名の指定と検証（`config.py` / `resources.py`）
+- 追加画像も、仕様書の「状態と画像の品質」に従う。背景透過 PNG とし、必須画像と同一のキャラクター・キャンバスサイズ・立ち位置で、右向き・全身・足元を下端に揃える。
+- 既定の表示幅でも違いが伝わるよう、表情だけでなく姿勢や外形にも差をつけることを推奨する。拡張はこの点を検証しない。
+- 文字は画像に描き込まない。左右反転しても破綻しない図形（汗・涙・星など）は描き込んでよい。右側の配置では画像に `scaleX(-1)` がかかり、文字は鏡文字になるためである。
+- 「Zzz」など拡張が表示する記号は、従来どおり HTML / CSS で重ねる。
 
-[`config.py`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/src/sphinx_revealjs_mascot/config.py) の `resolve_images(directory, pattern)` における解決・検証ルールを以下のとおり定める。
+統合時に、仕様書の「「Zzz」などの記号は画像に描き込まず、HTML / CSS で重ねる」を上記の規則へ改める。
 
-1. **標準画像使用時（`revealjs_mascot_image_dir` 未指定時）**:
-   - [`resources.py`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/src/sphinx_revealjs_mascot/resources.py) が返す標準画像ディレクトリから必須4状態（`REQUIRED_STATES`）を解決する。標準同梱アセットは4枚のままとし、オプション画像の同梱は必須としない。
-2. **`pattern` が `'{state}.png'` の場合**:
-   - `REQUIRED_STATES` の4ファイルすべてが存在することを検証し、1つでも不足していれば `ConfigError` とする。
-   - `OPTIONAL_STATES` についてはディレクトリ内にファイルが存在するものだけを `images` 辞書に取り込む。
-3. **`pattern` が `'file-name_{state}.png'` または `'{state}_file-name.png'` の場合**:
-   - ディレクトリ内の PNG から共通識別子（`file-name` 部分）ごとに状態をグループ化する。
-   - `REQUIRED_STATES` をすべて満たすグループがちょうど1組だけ存在することを検証する（0組または2組以上存在する場合は `ConfigError`）。
-   - 特定された1組の `file-name` に対応する `OPTIONAL_STATES` のファイルが存在すれば `images` 辞書に取り込む。異なる `file-name` を持つ孤立した状態画像が混在している場合は、設定ミスを防ぐため `ConfigError` とする。
+### 3.3 ファイル名の指定と検証（`config.py`）
+
+命名形式・画像フォルダの指定・エラー条件は、仕様書の [ファイル名の指定と検証](SPEC.md#image-filename-validation) を踏襲し、追加画像の取り込みだけを加える。
+
+1. 画像セットの検出とエラー判定は、必須4状態だけで行う。画像の不足・共通名の混在・複数セットの判定とメッセージは従来どおりとする。
+2. 検出したセットと同じ命名の追加画像があれば取り込む。`{state}.png` では `happy.png` などが対象となる。`file-name_{state}.png` と `{state}_file-name.png` では、検出したセットと同じ共通名を持つファイルが対象となる。
+3. 必須・追加のどちらの名前にも当たらないファイルと、検出したセットと異なる共通名を持つ追加画像は、従来どおり無視する。
+4. 標準画像は必須4枚のままとし、配布物に追加画像を同梱しない。
+
+例えば `file-name_{state}.png` で `dog_normal.png` などの4枚が揃っている場合、`dog_happy.png` は取り込み、`cat_happy.png` と `logo.png` は無視する。
+既存の画像フォルダに追加状態の名前を持つファイルがあれば、利用者の意図にかかわらず取り込まれる。
+
+### サンプル画像の配置と組み立て
+
+| フォルダ | 内容 | 配布物への同梱 |
+| --- | --- | --- |
+| `examples/_static/mascot/joubitaki/` | 必須4枚。標準画像の原本 | wheel・ソース配布物に含める |
+| `examples/_static/mascot/joubitaki-optional/` | 追加4枚。サンプル専用 | 含めない |
+
+- 追加アクションのサンプルは、ビルド時に2つのフォルダから1つの画像フォルダへ組み立て、`revealjs_mascot_image_dir` に指定する。組み立てた画像は Git で管理せず、原本の複製を手作業で保守しない。
+- 共用の `examples/conf.py` は拡張の既定値を使い続け、標準画像だけのサンプルを残す。追加アクションのサンプルは専用の原稿と設定に分ける。
+- テストでも、一時フォルダへ組み立てた画像を使う。
+- `joubitaki-optional/` には、標準画像と同様に、AI で生成したことと適用するライセンスの説明を置く。
 
 ## 4. アクションとディレクティブの仕様
 
 ### 4.1 アクション一覧
 
-[`config.py`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/src/sphinx_revealjs_mascot/config.py) の `ACTIONS` に、オプション4状態に対応する明示指定可能なアクションを追加する。
+[config.py](../src/sphinx_revealjs_mascot/config.py) の `ACTIONS` に、追加状態に対応する明示指定可能なアクションを加える。
+既定動作（前進時の `jump`、fragment 表示時の `wink`）と、[リアクションの優先順位](SPEC.md#reaction-priority) は変更しない。
 
-| アクション名 | 内容 | 使用画像 | 継続時間 | モーション | 明示指定 | 利用可能条件 |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `idle` | 通常待機 | `normal` | 常時 | 揺れ・呼吸 | 可 | 常時 |
-| `jump` | 軽く跳ねる | `normal` | `600ms` | `mascot-jump` | 可 | 常時 |
-| `wink` | 目を閉じる | `blink` | `180ms` | なし | 可 | 常時 |
-| `surprise` | 驚いて少し拡大する | `surprise` | `700ms` | `mascot-surprise` | 可 | 常時 |
-| `happy` | 喜んで弾む | `happy` | `900ms` | `mascot-happy` | 可 | `happy` 画像配置時のみ |
-| `tilt` | 首を傾げて静止する | `tilt` | `1100ms` | `mascot-tilt` | 可 | `tilt` 画像配置時のみ |
-| `trouble` | 縮こまって小刻みに震える | `trouble` | `900ms` | `mascot-trouble` | 可 | `trouble` 画像配置時のみ |
-| `proud` | 胸を張って少し拡大する | `proud` | `900ms` | `mascot-proud` | 可 | `proud` 画像配置時のみ |
-| `doze` | 居眠りして揺れる | `sleepy` | 無操作中 | `mascot-doze` | 不可 | 内部制御専用 |
-| `wake` | 驚いて飛び起きる | `surprise` | `500ms` | `mascot-wake` | 不可 | 内部制御専用 |
+| アクション名 | 内容 | 使用画像 | 明示指定 | 利用可能条件 |
+| --- | --- | --- | --- | --- |
+| `idle` | 通常の待機状態にする | `normal` | 可 | 常時 |
+| `jump` | 1回跳ねて通常の待機に戻る | `normal` | 可 | 常時 |
+| `wink` | 短時間、両目を閉じて通常の待機に戻る | `blink` | 可 | 常時 |
+| `surprise` | 短時間、驚きの表情にして通常の待機に戻る | `surprise` | 可 | 常時 |
+| `happy` | 喜んで弾み、通常の待機に戻る | `happy` | 可 | `happy` 画像の配置時 |
+| `tilt` | 首をかしげるように傾いて静止し、通常の待機に戻る | `tilt` | 可 | `tilt` 画像の配置時 |
+| `trouble` | 縮こまって小刻みに震え、通常の待機に戻る | `trouble` | 可 | `trouble` 画像の配置時 |
+| `proud` | 胸を張るように少し拡大し、通常の待機に戻る | `proud` | 可 | `proud` 画像の配置時 |
+| `doze` | ウトウトを継続する | `sleepy` | 不可。無操作タイマー専用 | 常時 |
+| `wake` | ハッと起きて通常の待機に戻る | `surprise` → `normal` | 不可。復帰処理専用 | 常時 |
 
 ### 4.2 ディレクティブでの検証とエラー条件（`directives.py`）
 
-[`directives.py`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/src/sphinx_revealjs_mascot/directives.py) の `.. mascot::` および `.. mascot-fragment::` では、`:action:` オプションに対して以下の2段階検証を行う。
+`mascot` と `mascot-fragment` の `action` オプションは、次の2段階で検証する。
 
-| エラー条件 | 検出タイミング | メッセージの方針 |
-| :--- | :--- | :--- |
-| 未定義のアクション名、または `explicit=False`（`doze`, `wake`）を指定した | ディレクティブ解析時（`_action`） | 明示指定できないアクションである旨と、指定可能なアクション名一覧を `ExtensionError` で示す |
-| オプションアクション（例：`:action: happy`）を指定したが、`settings.images` に対応する `happy` 画像が存在しない | `doctree-resolved`（`apply_slide_settings` および fragment 検証時） | 対象ドキュメント名・行番号とともに、該当アクションの利用には対応する状態画像の配置が必要である旨を `ExtensionError` で示す |
+| エラー条件 | 検出時点 | メッセージの方針 |
+| --- | --- | --- |
+| 未定義のアクション、または明示指定できない `doze`・`wake` を指定した | ディレクティブの解析時 | 従来どおり、指定可能なアクション名を示してビルドエラー。追加アクションは画像の有無にかかわらず一覧に含める |
+| 追加アクションを指定したが、対応する追加画像が解決されていない | `doctree-resolved`（スライドの設定と fragment の両方） | 文書名・行番号・アクション名と、必要な状態画像を示してビルドエラー |
+
+- 2段階目の検証は、画像を解決する reveal.js 用ビルダー（`revealjs`・`dirrevealjs`）だけで行う。
+- 画像フォルダの内容だけを変えた場合も検証が漏れないよう、利用可能な状態の組み合わせが前回のビルドから変わったときは、全ページを再検証・再出力する。
 
 ## 5. アセット出力・CSS・JavaScript の仕様
 
 ### 5.1 設定 JSON と画像コピー（`__init__.py`）
 
-[`__init__.py`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/src/sphinx_revealjs_mascot/__init__.py) のビルド処理を、固定4状態前提から解決済み画像（`settings.images`）基準へ変更する。
+[\_\_init\_\_.py](../src/sphinx_revealjs_mascot/__init__.py) のビルド処理を、固定4状態の前提から解決済みの画像（`settings.images`）基準へ変更する。
 
-- **画像コピー（`_copy_images`）**: `settings.images.items()` を走査し、実際に存在する状態画像のみを出力先の `_static/sphinx-revealjs-mascot/images/{state}.png` にコピーする。
-- **ページ埋め込み設定（`_page_config`）**: `#sphinx-revealjs-mascot-config` JSON の `images` には解決済みの状態のみを含め、`actions` には使用画像が `settings.images` に存在するアクション定義のみを含める。
-- **環境バージョン**: 保持データの構造変更に伴い、`setup(app)` の `env_version` を更新する。
+- 画像コピー: 解決済みの状態画像だけを `_static/sphinx-revealjs-mascot/images/{state}.png` へコピーする。前回のビルドで出力し、今回は解決されなかった状態の画像は出力先から取り除く。
+- ページ埋め込み設定: JSON の `images` には解決済みの状態だけを、`actions` には使用画像が解決済みのアクションだけを含める。
+- 環境バージョン: 保持データの構造変更に伴い、`setup()` の `env_version` を更新する。
 
 ### 5.2 追加リアクションの CSS モーション（`mascot.css`）
 
-[`mascot.css`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.css) の `#chara .react` に対して、追加4アクションのアニメーションを定義する。
+- 追加4アクションのアニメーションを `.react` 要素に定義する。回転には `--mascot-facing` を掛け、左右どちらの配置でも同じ見え方にする。
+- 寸法・角度・拡大率は `config.py` の `MOTION`、継続時間は `ACTIONS` に定義し、CSS 変数としてブラウザへ渡す。CSS と JavaScript に値を直書きしない。
+- 定型位置の余白計算（[mascot.js](../src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js) の `motionGaps`）に、追加モーションの最大変位を加える。跳躍中の回転（`happy`）と横方向の移動（`trouble`）も計算に含め、画面内に収める。
 
-- **画面端の見切れ防止（`motionGaps` との整合）**: [`mascot.js`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js) の `layout()` は `--mascot-jump-height`（既定 `0.15`）および `--mascot-surprise-scale`（既定 `1.06`）から表示余白を算出している。追加モーションの移動量・拡大率もこの既存パラメータの範囲内に収め、回転方向には `--mascot-facing` を掛けることで左右どちらの配置でも自然な向きで動作させる。
-- **各アニメーションの挙動**:
-  - `mascot-happy`: `--mascot-jump-height` の範囲内で軽快に2回跳ねつつ、わずかに左右へ揺れる。
-  - `mascot-tilt`: `calc(var(--mascot-facing) * -8deg)` へ首を傾けて一時静止し、終盤で元の角度に戻る。
-  - `mascot-trouble`: `scaleY(0.96)` で少し縮こまりながら、水平方向に小刻みに震える。
-  - `mascot-proud`: `scale(1.05)` で胸を張るように少し拡大し、元のサイズに戻る。
+| アクション | 動き | 初期値 |
+| --- | --- | --- |
+| `happy` | 2回跳ねながら、左右へわずかに揺れる | 継続 900ms。跳躍量は `jump` 以下 |
+| `tilt` | 画面中央と反対側へ傾いて静止し、終盤で元の角度に戻る | 継続 1100ms。傾き 8° |
+| `trouble` | 縦に少し縮みながら、水平方向に小刻みに震える | 継続 900ms。縦 0.96 倍 |
+| `proud` | 胸を張るように少し拡大し、元の大きさに戻る | 継続 900ms。1.05 倍 |
+
+初期値は実装時にブラウザで調整し、確定した値は `config.py` を正本とする。統合時に本書の数値は仕様書へ転記しない。
 
 ### 5.3 JavaScript 側の状態制御と外部連携 API（`mascot.js`）
 
-[`mascot.js`](https://github.com/in0ho1no/sphinx-revealjs-mascot/blob/develop/src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js) は、埋め込まれた JSON に存在する画像・アクションのみをプリロードおよび実行対象とする。また、将来任意の外部スクリプトからマスコットを操作できるよう、最小限の公開 API を `window.RevealMascot` として提供する。
-
-- **`runAction(action)` の保護**: 未登録のアクション名や未ロードの画像を参照した場合は例外を出さずに無視する。
-- **外部連携用公開メソッド（`window.RevealMascot`）**:
-  - `getAvailableActions()`: 現在配置されている画像セットで実行可能な明示アクション名の配列（例：4枚構成なら `['idle', 'jump', 'wink', 'surprise']`）を返す。
-  - `trigger(action, { wakeFromDoze = true } = {})`: マスコットが表示中かつ有効なアクションであれば無操作タイマーをリセットして再生する。`wakeFromDoze` が真のときは、`doze` 居眠り中であっても固定の `wake` ではなく指定された `action` で直接復帰させる。
-  - `isVisible()`: 現在の表示・非表示状態（真偽値）を返す。
+- 埋め込み JSON にある画像だけを読み込み、JSON にあるアクションだけを実行対象とする。未登録のアクションは、状態とタイマーを変更せずに無視する（現行どおり）。
+- 外部のスクリプトから操作するための最小限の公開 API を、キャラクターの初期化後に `window.RevealMascot` として提供する。将来の LLM によるアクション判定（F-23）での利用を想定する。
+  - `getAvailableActions()`: 現在の画像セットで明示指定できるアクション名の配列を返す。必須4枚だけの構成では `['idle', 'jump', 'wink', 'surprise']` となる。
+  - `trigger(action)`: スライド・fragment のイベントと同じ規則で、指定したアクションを実行する。非表示中の呼び出しと、明示指定できない・利用できないアクションは無視する。実行時は無操作タイマーをリセットする。ウトウト中は [リアクションの優先順位](SPEC.md#reaction-priority) に従って `wake` を優先し、指定したアクションは実行しない。
+  - `isVisible()`: 現在の表示状態を真偽値で返す。
 
 ## 6. 変更対象ファイルと検証範囲
 
 ### 6.1 変更対象ファイル一覧
 
-| 対象ファイル | 変更内容 |
-| :--- | :--- |
-| `src/sphinx_revealjs_mascot/config.py` | `REQUIRED_STATES`・`OPTIONAL_STATES` の定義、`resolve_images` の部分一致対応、`ACTIONS` への4アクション追加 |
-| `src/sphinx_revealjs_mascot/directives.py` | `doctree-resolved` 時に指定 `:action:` の必要画像が解決済みか検証し、未配置時に `ExtensionError` を送出 |
-| `src/sphinx_revealjs_mascot/__init__.py` | `_page_config` と `_copy_images` を `settings.images` 基準に変更、`env_version` のインクリメント |
-| `src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.css` | `happy`, `tilt`, `trouble`, `proud` 用の `[data-state]` セレクタと `@keyframes` の追加 |
-| `src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js` | 有効アクションのみの登録と `window.RevealMascot` 公開インターフェースの追加 |
+| 対象 | 変更内容 |
+| --- | --- |
+| `src/sphinx_revealjs_mascot/config.py` | `STATES` を `REQUIRED_STATES`・`OPTIONAL_STATES` に分ける。`resolve_images` で追加画像を取り込む。`ACTIONS`・`MOTION` に追加アクションと値を加える |
+| `src/sphinx_revealjs_mascot/directives.py` | 追加アクションに必要な画像の有無を `doctree-resolved` で検証する（スライドの設定・fragment） |
+| `src/sphinx_revealjs_mascot/__init__.py` | 画像コピーとページ埋め込み設定を解決済み画像の基準にする。古い画像の除去、画像の組み合わせが変わったときの再出力、`env_version` の更新 |
+| `src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.css` | 追加アクションの `[data-state]` セレクターと `@keyframes` |
+| `src/sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/mascot.js` | 余白計算への追加モーションの反映と、`window.RevealMascot` の公開 |
+| `examples/` | 追加アクションのサンプル原稿・設定と、画像の組み立て。`joubitaki-optional/` の画像の説明 |
+| `src/tests/` | 次節の検証範囲 |
+| `docs/` | 統合時に仕様書・実装と検証の記録・開発と検証を更新し、本書の内容を移す |
 
 ### 6.2 検証範囲（自動テスト項目）
 
-- 標準画像（`revealjs_mascot_image_dir = None`、4枚構成）のままで従来どおりビルドが成功し、出力 JSON にオプション画像が含まれないこと。
-- カスタム画像ディレクトリに必須4枚のみ、必須4枚＋一部オプション画像（例：`happy` のみ計5枚）、必須4枚＋全オプション画像（計8枚）を置いた各ケースで、3種類の命名パターンすべてにおいて正常にビルドできること。
-- 必須4枚のいずれかが欠けている場合、または異なる `file-name` の画像が混在している場合に `ConfigError` となること。
-- 未配置のオプション画像を必要とする `:action:`（例：`happy` 画像がない状態での `:action: happy`）を `.. mascot::` または `.. mascot-fragment::` に指定した際、`ExtensionError` でビルドエラーになること。
-- 配置済みのオプション画像を `:action:` に指定した際、HTML の `data-mascot-action` 属性および埋め込み JSON の `actions`・`images` に正しく出力されること。
+- 必須4枚だけの構成（標準画像・独自画像）で従来どおりビルドでき、出力 JSON に追加状態・追加アクションが含まれないこと。
+- 3つの命名形式それぞれで、必須4枚、必須4枚と一部の追加画像、必須4枚と全追加画像の構成でビルドでき、追加画像が取り込まれること。
+- 必須画像の不足・共通名の混在・複数セットが従来どおりビルドエラーになり、追加画像の有無で判定が変わらないこと。
+- 無関係なファイルと、検出したセットと異なる共通名の追加画像が無視されること。
+- 対応する追加画像がない追加アクションを `mascot`・`mascot-fragment` に指定すると、ビルドエラーになること。
+- 配置済みの追加アクションを指定すると、`data-mascot-action` 属性と JSON の `actions`・`images` に出力されること。
+- 追加画像を削除して増分ビルドした場合も、そのアクションを指定したページでエラーを検出し、出力先から古い画像を取り除くこと。
+- 追加アクションの CSS セレクターと、`MOTION` と CSS 変数の対応が、契約テストで一致すること。
+- JavaScript テストで、追加モーションを含む余白の境界、`trigger` の規則（非表示中・ウトウト中・不正なアクション）、`getAvailableActions` の結果を確認すること。
