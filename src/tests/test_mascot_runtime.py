@@ -38,6 +38,7 @@ def test_browser_script_state_transitions(node: str) -> None:
         'actions': {name: asdict(action) for name, action in ACTIONS.items()},
         'defaults': DEFAULT_ACTIONS,
         'states': REQUIRED_STATES + OPTIONAL_STATES,
+        'required': REQUIRED_STATES,
         'explicit': [name for name, action in ACTIONS.items() if action.explicit],
         'motion': MOTION,
     }

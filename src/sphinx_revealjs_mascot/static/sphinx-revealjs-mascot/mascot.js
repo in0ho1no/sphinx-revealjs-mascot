@@ -4,23 +4,31 @@
     const BLINK = { min: 2200, max: 6000, duration: 140 };
     const MAX_TIMEOUT = 2147483647;
 
-    function motionGaps(width, height, label, motion) {
+    function motionGaps(width, height, label, motion, actions) {
         const sine = (angle) => Math.sin(angle * Math.PI / 180);
         let horizontal = 0;
         let top = 0;
         let bottom = 0;
-        for (const [scale, angle, lift] of [
-            [1, 0, 0],
-            [1, 0, motion.jump_height],
-            [motion.surprise_scale, 0, 0],
-            [1, motion.wake_angle, motion.wake_height],
-            [1, motion.doze_max_angle, 0],
+        for (const [action, scale, angle, lift, shift] of [
+            ["idle", 1, 0, 0, 0],
+            ["jump", 1, 0, motion.jump_height, 0],
+            ["surprise", motion.surprise_scale, 0, 0, 0],
+            ["happy", 1, motion.happy_angle, motion.happy_height, 0],
+            ["tilt", 1, motion.tilt_angle, 0, 0],
+            ["trouble", 1, 0, 0, motion.trouble_shift],
+            ["proud", motion.proud_scale, 0, 0, 0],
+            ["wake", 1, motion.wake_angle, motion.wake_height, 0],
+            ["doze", 1, motion.doze_max_angle, 0, 0],
         ]) {
+            // 画像のない追加アクションは実行されないため、その変位で表示幅や余白を狭めない。
+            if (!Object.hasOwn(actions, action)) continue;
             const stretch = scale * motion.breath_scale;
             const tilt = sine(angle + motion.sway_angle);
-            horizontal = Math.max(horizontal, (stretch - 1) * width / 2 + stretch * height * tilt + lift * height * stretch * sine(motion.sway_angle));
-            top = Math.max(top, (stretch - 1) * height + stretch * width / 2 * tilt + lift * height * stretch);
-            bottom = Math.max(bottom, stretch * width / 2 * tilt);
+            // 横移動は外側の揺れで回転するため、横だけでなく上下にも変位を生む。
+            const shifted = stretch * shift * width;
+            horizontal = Math.max(horizontal, (stretch - 1) * width / 2 + stretch * height * tilt + lift * height * stretch * sine(motion.sway_angle) + shifted);
+            top = Math.max(top, (stretch - 1) * height + stretch * width / 2 * tilt + lift * height * stretch + shifted * sine(motion.sway_angle));
+            bottom = Math.max(bottom, stretch * width / 2 * tilt + shifted * sine(motion.sway_angle));
         }
         // 透明部分を差し引かず、画像全体と Zzz の矩形を保守的に画面内へ収める。
         const tilt = sine(motion.doze_max_angle + motion.sway_angle);
@@ -109,7 +117,7 @@
             const label = { width: sleep.offsetWidth, height: sleep.offsetHeight };
             const requested = window.innerWidth * config.width / 100;
             function fits(width) {
-                const gaps = motionGaps(width, width * ratio, label, config.motion);
+                const gaps = motionGaps(width, width * ratio, label, config.motion, config.actions);
                 return width + 2 * gaps.horizontal <= window.innerWidth && width * ratio + gaps.top + gaps.bottom <= window.innerHeight;
             }
             let width = requested;
@@ -123,7 +131,7 @@
                 }
                 width = Math.floor(low * 1000) / 1000;
             }
-            const gaps = motionGaps(width, width * ratio, label, config.motion);
+            const gaps = motionGaps(width, width * ratio, label, config.motion, config.actions);
             chara.style.setProperty("--mascot-rendered-width", `${width}px`);
             chara.style.setProperty("--mascot-horizontal-gap", `${gaps.horizontal}px`);
             chara.style.setProperty("--mascot-top-gap", `${gaps.top}px`);
@@ -240,6 +248,18 @@
         image.addEventListener("load", layout);
         window.addEventListener("resize", layout);
         resume();
+
+        // 画像の読み込みと配置が終わるまでは CSS で隠れているため、受け付けたリアクションが見えないまま終わる。
+        const shown = () => visible && chara.dataset.ready === "true";
+        window.RevealMascot = Object.freeze({
+            getAvailableActions: () => Object.keys(config.actions).filter((name) => config.actions[name].explicit),
+            trigger(action) {
+                // 不正な指定で無操作タイマーやウトウトからの復帰を動かさないよう、受け付ける前に除外する。
+                if (!shown() || typeof action !== "string" || !Object.hasOwn(config.actions, action) || !config.actions[action].explicit) return;
+                activity(action);
+            },
+            isVisible: shown,
+        });
     }
 
     function initialize() {

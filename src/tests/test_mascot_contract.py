@@ -30,6 +30,18 @@ def test_css_animates_exactly_the_actions_with_motion() -> None:
     assert styled == {name for name, action in ACTIONS.items() if action.motion}
 
 
+def test_each_action_animation_refers_to_its_keyframes() -> None:
+    keyframes = set(re.findall(r'@keyframes\s+([\w-]+)', _STYLE))
+    animations = {}
+    for state, body in re.findall(r'\[data-state="([^"]+)"\]\s*\.react\s*\{([^}]*)\}', _STYLE):
+        match = re.search(r'animation(?:-name)?:\s*([\w-]+)', body)
+        assert match, state
+        animations[state] = match.group(1)
+
+    assert animations == {name: f'mascot-{name}' for name, action in ACTIONS.items() if action.motion}
+    assert set(animations.values()) <= keyframes
+
+
 def test_names_written_in_javascript_are_defined_in_python() -> None:
     actions = set(re.findall(r'(?:runAction\(|state\s*(?:===|!==|=)\s*|action\s*===\s*)"([a-z]+)"', _SCRIPT))
     sprites = set(re.findall(r'sprites\.([a-z]+)', _SCRIPT))
