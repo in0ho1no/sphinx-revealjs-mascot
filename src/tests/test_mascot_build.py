@@ -91,28 +91,34 @@ def test_minimal_build_includes_local_assets_and_notices(tmp_path: Path, builder
             assert (page.parent / url).read_bytes() == original.read_bytes()
     assert (output / 'third_party/NOTICES.txt').read_bytes() == (_REPOSITORY / 'third_party/NOTICES.txt').read_bytes()
     assert {path.name for path in (output / 'third_party').iterdir()} == {'README.md', 'manifest.json', 'NOTICES.txt'}
+    assert json.loads((output / '.sphinx-revealjs-mascot.json').read_text(encoding='utf-8')) == {'states': list(REQUIRED_STATES + OPTIONAL_STATES)}
+
+
+def _record(states: tuple[str, ...]) -> str:
+    return json.dumps({'states': list(states)})
 
 
 @pytest.mark.parametrize(
-    ('previous', 'current', 'builder', 'reread'),
+    ('record', 'current', 'builder', 'reread'),
     [
         (None, REQUIRED_STATES, 'revealjs', True),
         (None, REQUIRED_STATES, 'html', False),
-        (REQUIRED_STATES, REQUIRED_STATES, 'revealjs', False),
-        ((*REQUIRED_STATES, 'badge'), REQUIRED_STATES, 'revealjs', False),
-        ((*REQUIRED_STATES, 'happy'), REQUIRED_STATES, 'revealjs', True),
-        (REQUIRED_STATES, (*REQUIRED_STATES, 'happy'), 'dirrevealjs', True),
-        ((*REQUIRED_STATES, 'happy'), REQUIRED_STATES, 'html', False),
+        (_record(REQUIRED_STATES), REQUIRED_STATES, 'revealjs', False),
+        (_record((*REQUIRED_STATES, 'happy')), REQUIRED_STATES, 'revealjs', True),
+        (_record(REQUIRED_STATES), (*REQUIRED_STATES, 'happy'), 'dirrevealjs', True),
+        (_record((*REQUIRED_STATES, 'happy')), REQUIRED_STATES, 'html', False),
+        ('{', REQUIRED_STATES, 'revealjs', True),
+        ('{"states": "normal"}', REQUIRED_STATES, 'revealjs', True),
     ],
 )
-def test_changed_image_states_reread_every_page(
-    tmp_path: Path, previous: tuple[str, ...] | None, current: tuple[str, ...], builder: str, reread: bool
-) -> None:
+def test_changed_image_states_reread_every_page(tmp_path: Path, record: str | None, current: tuple[str, ...], builder: str, reread: bool) -> None:
+    # 出力先の画像を現在の構成と揃え、判定が残った画像ではなく記録に基づくことを確かめる。
     destination = tmp_path / '_static/sphinx-revealjs-mascot/images'
-    if previous is not None:
-        destination.mkdir(parents=True)
-        for name in previous:
-            (destination / f'{name}.png').write_bytes(b'')
+    destination.mkdir(parents=True)
+    for state in current:
+        (destination / f'{state}.png').write_bytes(b'')
+    if record is not None:
+        (tmp_path / '.sphinx-revealjs-mascot.json').write_text(record, encoding='utf-8')
     settings = SimpleNamespace(images={state: tmp_path / f'{state}.png' for state in current})
     env = SimpleNamespace(domaindata={'sphinx-revealjs-mascot': {'settings': settings}}, found_docs={'nested/second', 'index'})
     app = SimpleNamespace(outdir=str(tmp_path), builder=SimpleNamespace(name=builder), env=env)

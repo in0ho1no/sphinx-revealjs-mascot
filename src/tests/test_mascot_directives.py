@@ -302,13 +302,16 @@ def test_incremental_build_follows_optional_images_and_keeps_other_static_files(
         assert files == {f'{state}.png' for state in states} | {'badge.png'}
 
 
-def test_removing_an_optional_image_in_use_fails_the_next_build(source: Path, tmp_path: Path) -> None:
+@pytest.mark.parametrize('also_from_output', [False, True])
+def test_removing_an_optional_image_in_use_fails_the_next_build(source: Path, tmp_path: Path, also_from_output: bool) -> None:
     image_dir = _use_custom_images(source, (*REQUIRED_STATES, 'happy'))
     (source / 'index.rst').write_text('Deck\n====\n\nSlide\n-----\n\n.. mascot::\n   :action: happy\n\nText.\n', encoding='utf-8')
     output = tmp_path / 'output'
     first = _build(source, output, source)
     assert first.returncode == 0, first.stdout + first.stderr
     (image_dir / 'happy.png').unlink()
+    if also_from_output:
+        (output / '_static/sphinx-revealjs-mascot/images/happy.png').unlink()
     second = _build(source, output, source, strict=False)
     assert second.returncode != 0
     assert "アクション 'happy' には状態画像 'happy' が必要です" in second.stdout + second.stderr

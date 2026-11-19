@@ -38,6 +38,8 @@ from sphinx_revealjs_mascot.resources import ASSET_NAME as _ASSET_NAME
 from sphinx_revealjs_mascot.resources import STATIC_DIR as _STATIC_DIR
 from sphinx_revealjs_mascot.resources import notice_root, project_license, standard_image_directory
 
+_STATE_RECORD = '.sphinx-revealjs-mascot.json'
+
 
 def _settings(app: Sphinx) -> Settings:
     """現在のビルドで解決済みの設定を返す。"""
@@ -91,17 +93,32 @@ def _check_actions(app: Sphinx, doctree: nodes.document, docname: str) -> None:
         check_action_images(doctree, docname, _settings(app).images)
 
 
+def _state_record(app: Sphinx) -> Path:
+    """HTML に埋め込んだ状態の記録ファイルを返す。"""
+    return Path(app.outdir, _STATE_RECORD)
+
+
+def _recorded_states(app: Sphinx) -> set[str] | None:
+    """前回成功したビルドの記録から状態の集合を読む。記録がない・壊れている場合は None を返す。"""
+    try:
+        record = json.loads(_state_record(app).read_text(encoding='utf-8'))
+    except OSError, ValueError:
+        return None
+    states = record.get('states') if isinstance(record, dict) else None
+    if not isinstance(states, list) or not all(isinstance(state, str) for state in states):
+        return None
+    return set(states)
+
+
 def _outdated_by_images(app: Sphinx, env: BuildEnvironment, added: Set[str], changed: Set[str], removed: Set[str]) -> list[str]:
     """利用できる状態が前回の成功したビルドから変わった場合、全ページを読み直して指定を再検証する。"""
     if not _is_revealjs(app):
         return []
-    destination = _image_destination(app)
-    # 環境は書き出しの前に保存され、失敗したビルドでも更新済みになるため、成功時だけ更新される出力先の画像と比べる。
-    # 出力先がなく前回の構成を確認できない場合も、既存ページの指定を見逃さないよう全ページを読み直す。
-    if destination.is_dir():
-        previous = {state for state in REQUIRED_STATES + OPTIONAL_STATES if (destination / f'{state}.png').is_file()}
-        if previous == set(_settings(app).images):
-            return []
+    # 環境は書き出しの前に保存され、失敗したビルドでも更新済みになるため、成功したビルドの最後に書く記録と比べる。
+    # 出力先に残った画像から推測すると、画像を一部消した場合に前回の HTML の構成と食い違う。
+    # 記録がなく前回の構成を確認できない場合も、既存ページの指定を見逃さないよう全ページを読み直す。
+    if _recorded_states(app) == set(_settings(app).images):
+        return []
     return sorted(env.found_docs)
 
 
@@ -122,6 +139,8 @@ def _copy_images(app: Sphinx, exception: Exception | None) -> None:
     shutil.copyfile(project_license(), destination.parent / 'LICENSE')
     shutil.copyfile(standard_image_directory() / 'README.md', destination.parent / 'STANDARD-IMAGES.md')
     export_notices(notice_root(), Path(app.outdir) / 'third_party')
+    # 出力が途中で失敗した場合に次のビルドで全ページを読み直すよう、記録は最後に更新する。
+    _state_record(app).write_text(json.dumps({'states': list(images)}), encoding='utf-8')
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:

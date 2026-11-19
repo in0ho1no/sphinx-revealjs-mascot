@@ -122,9 +122,12 @@ def test_failed_build_keeps_previously_written_images(artifacts: tuple[Path, Pat
     first = _build_with_wheel(site, source, output)
     assert first.returncode == 0, first.stdout + first.stderr
     images = output / '_static/sphinx-revealjs-mascot/images'
+    record = output / '.sphinx-revealjs-mascot.json'
     written = {path.name: path.read_bytes() for path in images.iterdir()}
+    recorded = record.read_text(encoding='utf-8')
     (pictures / 'happy.png').unlink()
     second = _build_with_wheel(site, source, output)
     assert second.returncode != 0
     assert "アクション 'happy' には状態画像 'happy' が必要です" in second.stdout + second.stderr
     assert {path.name: path.read_bytes() for path in images.iterdir()} == written
+    assert record.read_text(encoding='utf-8') == recorded
