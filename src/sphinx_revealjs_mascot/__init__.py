@@ -11,7 +11,16 @@ from sphinx.application import Sphinx
 from sphinx.util.osutil import relative_uri
 from sphinx.util.typing import ExtensionMetadata
 
-from sphinx_revealjs_mascot.config import ACTIONS, CONFIG_DEFAULTS, DEFAULT_ACTIONS, MOTION, STATES, Settings, resolve_settings
+from sphinx_revealjs_mascot.config import (
+    ACTIONS,
+    CONFIG_DEFAULTS,
+    DEFAULT_ACTIONS,
+    MOTION,
+    OPTIONAL_STATES,
+    REQUIRED_STATES,
+    Settings,
+    resolve_settings,
+)
 from sphinx_revealjs_mascot.directives import (
     MascotDirective,
     MascotFragment,
@@ -55,7 +64,7 @@ def _page_config(app: Sphinx, pagename: str, templatename: str, context: dict[st
     page_uri = app.builder.get_target_uri(pagename)
     settings = _settings(app)
     config = {
-        'images': {state: relative_uri(page_uri, f'_static/{_ASSET_NAME}/images/{state}.png') for state in STATES},
+        'images': {state: relative_uri(page_uri, f'_static/{_ASSET_NAME}/images/{state}.png') for state in settings.images},
         'width': settings.width,
         'position': asdict(settings.position),
         'idleTimeout': settings.idle_timeout,
@@ -74,7 +83,13 @@ def _copy_images(app: Sphinx, exception: Exception | None) -> None:
         return
     destination = Path(app.outdir) / '_static' / _ASSET_NAME / 'images'
     destination.mkdir(parents=True, exist_ok=True)
-    for state, source in _settings(app).images.items():
+    images = _settings(app).images
+    # 静的ファイルの登録では同梱の標準画像もフォルダごとコピーされ、前回のビルドの画像も上書きされずに残る。
+    # 利用者が静的ファイルとして同じフォルダへ置いた画像を消さないよう、削除は解決しなかった状態名の画像に限る。
+    for state in REQUIRED_STATES + OPTIONAL_STATES:
+        if state not in images:
+            (destination / f'{state}.png').unlink(missing_ok=True)
+    for state, source in images.items():
         shutil.copyfile(source, destination / f'{state}.png')
     shutil.copyfile(project_license(), destination.parent / 'LICENSE')
     shutil.copyfile(standard_image_directory() / 'README.md', destination.parent / 'STANDARD-IMAGES.md')

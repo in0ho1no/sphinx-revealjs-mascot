@@ -3,7 +3,9 @@
 import re
 from pathlib import Path
 
-from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, MOTION, STATES
+from sphinx_revealjs_mascot.config import ACTIONS, DEFAULT_ACTIONS, MOTION, OPTIONAL_STATES, REQUIRED_STATES
+
+_STATES = REQUIRED_STATES + OPTIONAL_STATES
 
 _STATIC = Path(__file__).resolve().parents[1] / 'sphinx_revealjs_mascot/static/sphinx-revealjs-mascot'
 _SCRIPT = (_STATIC / 'mascot.js').read_text(encoding='utf-8')
@@ -18,7 +20,7 @@ def test_default_actions_can_be_specified_explicitly() -> None:
 
 def test_every_action_uses_a_known_image_and_non_negative_duration() -> None:
     for name, action in ACTIONS.items():
-        assert action.image in STATES, name
+        assert action.image in _STATES, name
         assert action.duration >= 0, name
 
 
@@ -34,7 +36,7 @@ def test_names_written_in_javascript_are_defined_in_python() -> None:
     defaults = set(re.findall(r'defaultActions\.([a-z]+)', _SCRIPT))
 
     assert {'idle', 'doze', 'wake'} <= actions <= set(ACTIONS)
-    assert {'normal', 'blink'} <= sprites <= set(STATES)
+    assert {'normal', 'blink'} <= sprites <= set(REQUIRED_STATES)
     assert defaults == set(DEFAULT_ACTIONS)
 
 

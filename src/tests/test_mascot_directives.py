@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from sphinx_revealjs_mascot.config import OPTIONAL_STATES, REQUIRED_STATES
+
 _REPOSITORY = Path(__file__).resolve().parents[2]
 
 
@@ -186,3 +188,58 @@ def test_custom_configuration_and_images_reach_output(source: Path, tmp_path: Pa
     assert config_values['toggleKey'] == 'x'
     for state, url in config_values['images'].items():
         assert (tmp_path / 'output' / url).read_bytes() == (image_dir / f'bird_{state}.png').read_bytes()
+
+
+def _output_images(output: Path) -> tuple[list[str], set[str]]:
+    markup = _Markup()
+    markup.feed((output / 'index.html').read_text(encoding='utf-8'))
+    return list(json.loads(markup.config)['images']), {path.name for path in (output / '_static/sphinx-revealjs-mascot/images').iterdir()}
+
+
+@pytest.mark.parametrize(
+    ('pattern', 'filename', 'optional'),
+    [
+        ('{state}.png', '{state}.png', ()),
+        ('file-name_{state}.png', 'bird_{state}.png', ('happy',)),
+        ('{state}_file-name.png', '{state}_bird.png', OPTIONAL_STATES),
+    ],
+)
+def test_custom_images_in_output_match_resolved_states(source: Path, tmp_path: Path, pattern: str, filename: str, optional: tuple[str, ...]) -> None:
+    image_dir = source / 'pictures'
+    image_dir.mkdir()
+    states = REQUIRED_STATES + optional
+    for state in states:
+        (image_dir / filename.format(state=state)).write_bytes(f'custom {state}'.encode())
+    (image_dir / 'logo.png').write_bytes(b'unrelated')
+    with (source / 'conf.py').open('a', encoding='utf-8') as config:
+        config.write(f"revealjs_mascot_image_dir = 'pictures'\nrevealjs_mascot_image_pattern = {pattern!r}\n")
+    (source / 'index.rst').write_text('Deck\n====\n\nSlide\n-----\n\nText.\n', encoding='utf-8')
+    output = tmp_path / 'output'
+    result = _build(source, output, source)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _output_images(output) == (list(states), {f'{state}.png' for state in states})
+    for state in states:
+        assert (output / f'_static/sphinx-revealjs-mascot/images/{state}.png').read_bytes() == f'custom {state}'.encode()
+
+
+def test_incremental_build_follows_optional_images_and_keeps_other_static_files(source: Path, tmp_path: Path) -> None:
+    image_dir = source / 'pictures'
+    image_dir.mkdir()
+    for state in REQUIRED_STATES:
+        (image_dir / f'{state}.png').write_bytes(state.encode())
+    badge = source / '_static/sphinx-revealjs-mascot/images/badge.png'
+    badge.parent.mkdir(parents=True)
+    badge.write_bytes(b'badge')
+    with (source / 'conf.py').open('a', encoding='utf-8') as config:
+        config.write("revealjs_mascot_image_dir = 'pictures'\nrevealjs_static_path = ['_static']\n")
+    (source / 'index.rst').write_text('Deck\n====\n\nSlide\n-----\n\nText.\n', encoding='utf-8')
+    output = tmp_path / 'output'
+    happy = image_dir / 'happy.png'
+    for states in (REQUIRED_STATES, (*REQUIRED_STATES, 'happy'), REQUIRED_STATES):
+        if 'happy' in states:
+            happy.write_bytes(b'happy')
+        else:
+            happy.unlink(missing_ok=True)
+        result = _build(source, output, source)
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert _output_images(output) == (list(states), {f'{state}.png' for state in states} | {'badge.png'})
