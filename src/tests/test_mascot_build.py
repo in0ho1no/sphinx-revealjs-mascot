@@ -96,7 +96,8 @@ def test_minimal_build_includes_local_assets_and_notices(tmp_path: Path, builder
 @pytest.mark.parametrize(
     ('previous', 'current', 'builder', 'reread'),
     [
-        (None, REQUIRED_STATES, 'revealjs', False),
+        (None, REQUIRED_STATES, 'revealjs', True),
+        (None, REQUIRED_STATES, 'html', False),
         (REQUIRED_STATES, REQUIRED_STATES, 'revealjs', False),
         ((*REQUIRED_STATES, 'badge'), REQUIRED_STATES, 'revealjs', False),
         ((*REQUIRED_STATES, 'happy'), REQUIRED_STATES, 'revealjs', True),

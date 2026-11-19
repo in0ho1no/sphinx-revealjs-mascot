@@ -37,7 +37,8 @@ def test_wheel_and_sdist_preserve_assets_and_original_notices(artifacts: tuple[P
     package = 'sphinx_revealjs_mascot'
     with zipfile.ZipFile(wheel) as archive:
         for name in _STANDARD_FILES:
-            assert archive.read(f'{package}/static/sphinx-revealjs-mascot/images/{name}') == (_REPOSITORY / _STANDARD_IMAGES / name).read_bytes()
+            assert archive.read(f'{package}/images/{name}') == (_REPOSITORY / _STANDARD_IMAGES / name).read_bytes()
+        assert not [name for name in archive.namelist() if name.startswith(f'{package}/static/') and name.endswith('.png')]
         for name in ['README.md', 'manifest.json', 'NOTICES.txt']:
             assert archive.read(f'{package}/third_party/{name}') == (_REPOSITORY / 'third_party' / name).read_bytes()
         assert archive.read(f'{package}/static/sphinx-revealjs-mascot/LICENSE') == (_REPOSITORY / 'LICENSE').read_bytes()
@@ -50,12 +51,36 @@ def test_wheel_and_sdist_preserve_assets_and_original_notices(artifacts: tuple[P
             assert member.read() == (_REPOSITORY / relative).read_bytes()
 
 
-@pytest.mark.parametrize('custom', [False, True])
-def test_extracted_wheel_builds_without_repository_imports(artifacts: tuple[Path, Path], tmp_path: Path, custom: bool) -> None:
-    wheel, _ = artifacts
-    site = tmp_path / 'site'
+def _extract_wheel(wheel: Path, site: Path) -> Path:
     with zipfile.ZipFile(wheel) as archive:
         archive.extractall(site)
+    return site
+
+
+def _build_with_wheel(site: Path, source: Path, output: Path) -> subprocess.CompletedProcess[str]:
+    bootstrap = (
+        'import sys\nfrom pathlib import Path\n'
+        f'sys.path.insert(0, {str(site)!r})\n'
+        'import sphinx_revealjs_mascot as mascot\n'
+        f'assert Path(mascot.__file__).is_relative_to({str(site)!r})\n'
+        'from sphinx.cmd.build import main\n'
+        f'sys.exit(main({["-W", "-b", "revealjs", str(source), str(output)]!r}))\n'
+    )
+    return subprocess.run(
+        [sys.executable, '-I', '-X', 'utf8', '-c', bootstrap],
+        cwd=site.parent,
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+        errors='replace',
+        check=False,
+        timeout=120,
+    )
+
+
+@pytest.mark.parametrize('custom', [False, True])
+def test_extracted_wheel_builds_without_repository_imports(artifacts: tuple[Path, Path], tmp_path: Path, custom: bool) -> None:
+    site = _extract_wheel(artifacts[0], tmp_path / 'site')
     source = tmp_path / 'source'
     source.mkdir()
     config = "extensions = ['sphinx_revealjs_mascot']\n"
@@ -69,24 +94,7 @@ def test_extracted_wheel_builds_without_repository_imports(artifacts: tuple[Path
     (source / 'conf.py').write_text(config, encoding='utf-8')
     (source / 'index.rst').write_text('Package\n=======\n\nSlide\n-----\n\n.. mascot::\n   :position: top-left\n\nText.\n', encoding='utf-8')
     output = tmp_path / 'html'
-    bootstrap = (
-        'import sys\nfrom pathlib import Path\n'
-        f'sys.path.insert(0, {str(site)!r})\n'
-        'import sphinx_revealjs_mascot as mascot\n'
-        f'assert Path(mascot.__file__).is_relative_to({str(site)!r})\n'
-        'from sphinx.cmd.build import main\n'
-        f'sys.exit(main({["-W", "-b", "revealjs", str(source), str(output)]!r}))\n'
-    )
-    result = subprocess.run(
-        [sys.executable, '-I', '-X', 'utf8', '-c', bootstrap],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        encoding='utf-8',
-        errors='replace',
-        check=False,
-        timeout=120,
-    )
+    result = _build_with_wheel(site, source, output)
     assert result.returncode == 0, result.stdout + result.stderr
     html = (output / 'index.html').read_text(encoding='utf-8')
     assert 'data-mascot-position="top-left"' in html
@@ -99,3 +107,24 @@ def test_extracted_wheel_builds_without_repository_imports(artifacts: tuple[Path
         original = source / f'pictures/custom_{state}.png' if custom else _REPOSITORY / _STANDARD_IMAGES / f'{state}.png'
         assert (asset_dir / f'images/{state}.png').read_bytes() == original.read_bytes()
     assert {path.name for path in (asset_dir / 'images').glob('*.png')} == {f'{state}.png' for state in states}
+
+
+def test_failed_build_keeps_previously_written_images(artifacts: tuple[Path, Path], tmp_path: Path) -> None:
+    site = _extract_wheel(artifacts[0], tmp_path / 'site')
+    source = tmp_path / 'source'
+    pictures = source / 'pictures'
+    pictures.mkdir(parents=True)
+    for state in (*REQUIRED_STATES, 'happy'):
+        (pictures / f'{state}.png').write_bytes(f'custom {state}'.encode())
+    (source / 'conf.py').write_text("extensions = ['sphinx_revealjs_mascot']\nrevealjs_mascot_image_dir = 'pictures'\n", encoding='utf-8')
+    (source / 'index.rst').write_text('Package\n=======\n\nSlide\n-----\n\n.. mascot::\n   :action: happy\n\nText.\n', encoding='utf-8')
+    output = tmp_path / 'html'
+    first = _build_with_wheel(site, source, output)
+    assert first.returncode == 0, first.stdout + first.stderr
+    images = output / '_static/sphinx-revealjs-mascot/images'
+    written = {path.name: path.read_bytes() for path in images.iterdir()}
+    (pictures / 'happy.png').unlink()
+    second = _build_with_wheel(site, source, output)
+    assert second.returncode != 0
+    assert "アクション 'happy' には状態画像 'happy' が必要です" in second.stdout + second.stderr
+    assert {path.name: path.read_bytes() for path in images.iterdir()} == written

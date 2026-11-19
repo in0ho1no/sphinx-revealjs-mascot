@@ -74,6 +74,12 @@ class MascotFragmentDirective(SphinxDirective):
         return [node]
 
 
+def _location(node: nodes.Element, docname: str) -> str:
+    """ディレクティブを記述したファイルと行番号を返す。"""
+    # include で取り込んだ記述では、文書名と取り込み元の行番号を組み合わせると別の位置を指すため、記述元のファイルを使う。
+    return f'{node.source or docname}:{node.line}'
+
+
 def check_action_images(doctree: nodes.document, docname: str, states: Collection[str]) -> None:
     """解決されていない状態画像を使うアクションの指定をビルドエラーにする。"""
     for node in [*doctree.findall(MascotSettings), *doctree.findall(MascotFragment)]:
@@ -81,7 +87,7 @@ def check_action_images(doctree: nodes.document, docname: str, states: Collectio
         if action is None or ACTIONS[action].image in states:
             continue
         image = ACTIONS[action].image
-        raise ExtensionError(f'{docname}:{node.line}: アクション {action!r} には状態画像 {image!r} が必要です。画像フォルダに追加してください')
+        raise ExtensionError(f'{_location(node, docname)}: アクション {action!r} には状態画像 {image!r} が必要です。画像フォルダに追加してください')
 
 
 def apply_slide_settings(app: Sphinx, doctree: nodes.document, docname: str) -> None:
@@ -90,9 +96,9 @@ def apply_slide_settings(app: Sphinx, doctree: nodes.document, docname: str) -> 
     for marker in list(doctree.findall(MascotSettings)):
         section = marker.parent
         if not isinstance(section, nodes.section):
-            raise ExtensionError(f'{docname}:{marker.line}: mascot はスライドの見出し直後に置いてください')
+            raise ExtensionError(f'{_location(marker, docname)}: mascot はスライドの見出し直後に置いてください')
         if id(section) in seen:
-            raise ExtensionError(f'{docname}:{marker.line}: 同じスライドに mascot を複数指定できません')
+            raise ExtensionError(f'{_location(marker, docname)}: 同じスライドに mascot を複数指定できません')
         seen.add(id(section))
         attributes = next((child for child in section.children if isinstance(child, revealjs_section)), None)
         if attributes is None:

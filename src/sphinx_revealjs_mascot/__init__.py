@@ -93,12 +93,16 @@ def _check_actions(app: Sphinx, doctree: nodes.document, docname: str) -> None:
 
 def _outdated_by_images(app: Sphinx, env: BuildEnvironment, added: Set[str], changed: Set[str], removed: Set[str]) -> list[str]:
     """利用できる状態が前回の成功したビルドから変わった場合、全ページを読み直して指定を再検証する。"""
-    destination = _image_destination(app)
-    if not _is_revealjs(app) or not destination.is_dir():
+    if not _is_revealjs(app):
         return []
+    destination = _image_destination(app)
     # 環境は書き出しの前に保存され、失敗したビルドでも更新済みになるため、成功時だけ更新される出力先の画像と比べる。
-    previous = {state for state in REQUIRED_STATES + OPTIONAL_STATES if (destination / f'{state}.png').is_file()}
-    return sorted(env.found_docs) if previous != set(_settings(app).images) else []
+    # 出力先がなく前回の構成を確認できない場合も、既存ページの指定を見逃さないよう全ページを読み直す。
+    if destination.is_dir():
+        previous = {state for state in REQUIRED_STATES + OPTIONAL_STATES if (destination / f'{state}.png').is_file()}
+        if previous == set(_settings(app).images):
+            return []
+    return sorted(env.found_docs)
 
 
 def _copy_images(app: Sphinx, exception: Exception | None) -> None:
@@ -108,7 +112,7 @@ def _copy_images(app: Sphinx, exception: Exception | None) -> None:
     destination = _image_destination(app)
     destination.mkdir(parents=True, exist_ok=True)
     images = _settings(app).images
-    # 静的ファイルの登録では同梱の標準画像もフォルダごとコピーされ、前回のビルドの画像も上書きされずに残る。
+    # 前回のビルドで出力した画像は上書きされずに残る。
     # 利用者が静的ファイルとして同じフォルダへ置いた画像を消さないよう、削除は解決しなかった状態名の画像に限る。
     for state in REQUIRED_STATES + OPTIONAL_STATES:
         if state not in images:

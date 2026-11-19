@@ -268,7 +268,16 @@ def test_optional_action_without_its_image_is_build_error(source: Path, tmp_path
     (source / f'index.{suffix}').write_text(content, encoding='utf-8')
     result = _build(source, tmp_path / 'output', source, strict=False)
     assert result.returncode != 0
-    assert re.search(r"index:\d+: アクション 'tilt' には状態画像 'tilt' が必要です", result.stdout + result.stderr)
+    assert re.search(rf"index\.{suffix}:\d+: アクション 'tilt' には状態画像 'tilt' が必要です", result.stdout + result.stderr)
+
+
+def test_missing_image_error_points_to_the_included_file(source: Path, tmp_path: Path) -> None:
+    _use_custom_images(source, REQUIRED_STATES)
+    (source / 'slide.inc').write_text('Slide\n-----\n\nOne.\n\nTwo.\n\n.. mascot::\n   :action: tilt\n', encoding='utf-8')
+    (source / 'index.rst').write_text('Deck\n====\n\n.. include:: slide.inc\n', encoding='utf-8')
+    result = _build(source, tmp_path / 'output', source, strict=False)
+    assert result.returncode != 0
+    assert re.search(r"slide\.inc:8: アクション 'tilt' には状態画像 'tilt' が必要です", result.stdout + result.stderr)
 
 
 def test_incremental_build_follows_optional_images_and_keeps_other_static_files(source: Path, tmp_path: Path) -> None:
