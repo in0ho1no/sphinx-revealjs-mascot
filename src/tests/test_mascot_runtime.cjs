@@ -486,32 +486,46 @@ test("不正なアクションが来ても進行中のリアクションと完�
     assert.equal(currentState(state), "idle");
 });
 
-test("四隅では画像と Zzz が各モーションの変位を含めて画面内に収まる", () => {
-    const m = contract.motion;
-    const rotate = ([x, y], angle) => {
-        const rad = angle * Math.PI / 180;
-        return [x * Math.cos(rad) - y * Math.sin(rad), x * Math.sin(rad) + y * Math.cos(rad)];
-    };
-    for (const viewport of [[1920, 1080], [2560, 1080], [1280, 720]]) {
+function rotate([x, y], angle) {
+    const rad = angle * Math.PI / 180;
+    return [x * Math.cos(rad) - y * Math.sin(rad), x * Math.sin(rad) + y * Math.cos(rad)];
+}
+
+// 実行できるアクションの姿勢を、拡大率・回転角・跳躍量・Zzz の有無・横移動量の組で返す。
+function posesFor(m, actions) {
+    const poses = [];
+    const add = (action, ...pose) => { if (Object.hasOwn(actions, action)) poses.push(pose); };
+    add("idle", 1, 0, 0, false, 0);
+    add("jump", 1, 0, m.jump_height, false, 0);
+    add("surprise", m.surprise_scale, 0, 0, false, 0);
+    add("proud", m.proud_scale, 0, 0, false, 0);
+    for (const sign of [-1, 1]) {
+        add("wake", 1, sign * m.wake_angle, m.wake_height, false, 0);
+        add("happy", 1, sign * m.happy_angle, m.happy_height, false, 0);
+        add("tilt", 1, sign * m.tilt_angle, 0, false, 0);
+        add("trouble", 1, 0, 0, false, sign * m.trouble_shift);
+        for (const angle of [m.doze_min_angle, m.doze_max_angle]) add("doze", 1, sign * angle, 0, true, 0);
+    }
+    return poses;
+}
+
+function layoutOf(state) {
+    const style = state.elements.get("chara").style;
+    return ["--mascot-rendered-width", "--mascot-horizontal-gap", "--mascot-top-gap", "--mascot-bottom-gap"].map((name) => parseFloat(style[name]));
+}
+
+function assertInsideViewport(m, actions) {
+    for (const viewport of [[1920, 1080], [2560, 1080], [1280, 720], [3840, 2160]]) {
         for (const requested of [16, 25, 100]) {
             for (const imageSize of [[1024, 1024], [600, 1200], [1600, 800]]) {
-                const state = fixture({ viewport, imageSize, overrides: { width: requested } });
-                const style = state.elements.get("chara").style;
-                const width = parseFloat(style["--mascot-rendered-width"]);
+                const state = fixture({ viewport, imageSize, overrides: { width: requested, motion: m, actions } });
+                const [width, gap, top, bottom] = layoutOf(state);
                 const height = width * imageSize[1] / imageSize[0];
-                const gap = parseFloat(style["--mascot-horizontal-gap"]);
-                const top = parseFloat(style["--mascot-top-gap"]);
-                const bottom = parseFloat(style["--mascot-bottom-gap"]);
                 assert.ok(width > 0 && width <= viewport[0] * requested / 100);
-                const poses = [[1, 0, 0, false], [1, 0, m.jump_height, false], [m.surprise_scale, 0, 0, false]];
-                for (const sign of [-1, 1]) {
-                    poses.push([1, sign * m.wake_angle, m.wake_height, false]);
-                    for (const angle of [m.doze_min_angle, m.doze_max_angle]) poses.push([1, sign * angle, 0, true]);
-                }
                 for (const anchor of ["top-left", "top-right", "bottom-left", "bottom-right"]) {
                     const foot = [anchor.endsWith("left") ? gap + width / 2 : viewport[0] - gap - width / 2,
                         anchor.startsWith("top") ? top + height : viewport[1] - bottom];
-                    for (const [scale, tilt, lift, sleeping] of poses) {
+                    for (const [scale, tilt, lift, sleeping, shift] of posesFor(m, actions)) {
                         const corners = [[-width / 2, -height], [width / 2, -height], [-width / 2, 0], [width / 2, 0]];
                         if (sleeping) {
                             const right = width * (0.5 - m.sleep_right);
@@ -523,6 +537,7 @@ test("四隅では画像と Zzz が各モーションの変位を含めて画面
                             for (const breath of [1, m.breath_scale]) {
                                 for (const point of corners) {
                                     let [x, y] = rotate(point.map((value) => value * scale), tilt);
+                                    x += shift * width;
                                     y = (y - lift * height) * breath;
                                     [x, y] = rotate([x, y], sway);
                                     x += foot[0]; y += foot[1];
@@ -537,6 +552,107 @@ test("四隅では画像と Zzz が各モーションの変位を含めて画面
             }
         }
     }
+}
+
+test("四隅では画像と Zzz が各モーションの変位を含めて画面内に収まる", () => {
+    assertInsideViewport(contract.motion, contract.actions);
+});
+
+// 既定値では追加アクションの変位が既存の動きに収まり、まとめて誇張すると別の動きの余白に計算漏れが隠れる。
+// 必須アクションに1種だけ加え、その変位が余白を決める値で確かめる。
+for (const [action, values] of Object.entries({
+    happy: { happy_height: 0.3, happy_angle: 12 },
+    tilt: { tilt_angle: 15 },
+    trouble: { trouble_shift: 0.22, sway_angle: 15, doze_max_angle: 4 },
+    proud: { proud_scale: 1.2 },
+})) {
+    test(`${action} の変位が余白を決める場合も四隅で画面内に収まる`, () => {
+        const motion = { ...contract.motion, ...values };
+        const required = requiredOnly().actions;
+        const actions = { ...required, [action]: contract.actions[action] };
+        const without = layoutOf(fixture({ overrides: { motion, actions: required } })).slice(1);
+        const added = layoutOf(fixture({ overrides: { motion, actions } })).slice(1);
+        assert.ok(added.some((value, index) => value > without[index]), JSON.stringify({ without, added }));
+        assertInsideViewport(motion, actions);
+    });
+}
+
+function requiredOnly() {
+    return {
+        images: Object.fromEntries(contract.required.map((state) => [state, `_static/images/${state}.png`])),
+        actions: Object.fromEntries(Object.entries(contract.actions).filter(([, action]) => contract.required.includes(action.image))),
+    };
+}
+
+test("画像のない追加アクションの変位は余白に含めない", () => {
+    const motion = { ...contract.motion, happy_height: 0.5 };
+    const topGap = (state) => parseFloat(state.elements.get("chara").style["--mascot-top-gap"]);
+    const baseline = topGap(fixture());
+    assert.ok(topGap(fixture({ overrides: { motion } })) > baseline);
+    assert.equal(topGap(fixture({ overrides: { motion, ...requiredOnly() } })), baseline);
+});
+
+test("公開 API は現在の画像で明示指定できるアクションを返す", () => {
+    assert.deepEqual([...fixture().window.RevealMascot.getAvailableActions()], contract.explicit);
+    const state = fixture({ overrides: requiredOnly() });
+    assert.deepEqual([...state.window.RevealMascot.getAvailableActions()], ["idle", "jump", "wink", "surprise"]);
+});
+
+test("公開 API は画像の読み込みと配置が終わるまで表示前として扱う", () => {
+    const state = fixture({ imageSize: [0, 0] });
+    const api = state.window.RevealMascot;
+    assert.equal(state.elements.get("chara").dataset.ready, "false");
+    assert.equal(api.isVisible(), false);
+    api.trigger("happy");
+    assert.equal(currentState(state), "idle");
+    const image = state.elements.get("chara-img");
+    image.naturalWidth = 1024;
+    image.naturalHeight = 1024;
+    image.load();
+    assert.equal(api.isVisible(), true);
+    api.trigger("happy");
+    assert.equal(currentState(state), "happy");
+});
+
+test("公開 API の trigger はアクションを実行し、無操作時間を数え直す", () => {
+    const state = fixture();
+    const api = state.window.RevealMascot;
+    state.clock.advance(5000);
+    api.trigger("happy");
+    assert.equal(currentState(state), "happy");
+    assert.match(currentImage(state), /happy\.png$/);
+    state.clock.advance(9000);
+    assert.equal(currentState(state), "idle");
+    state.clock.advance(1000);
+    assert.equal(currentState(state), "doze");
+});
+
+test("公開 API の trigger はウトウト中なら指定より wake を優先する", () => {
+    const state = fixture();
+    state.clock.advance(10000);
+    assert.equal(currentState(state), "doze");
+    state.window.RevealMascot.trigger("happy");
+    assert.equal(currentState(state), "wake");
+});
+
+test("公開 API は不正・利用できないアクションと非表示中の呼び出しを無視する", () => {
+    const state = fixture({ overrides: requiredOnly() });
+    const api = state.window.RevealMascot;
+    assert.equal(api.isVisible(), true);
+    state.clock.advance(5000);
+    for (const action of ["happy", "doze", "wake", "unknown", "__proto__", "constructor", 1, null]) {
+        api.trigger(action);
+        assert.equal(currentState(state), "idle");
+    }
+    state.clock.advance(5000);
+    assert.equal(currentState(state), "doze");
+    state.key();
+    assert.equal(api.isVisible(), false);
+    api.trigger("jump");
+    assert.equal(currentState(state), "idle");
+    assert.equal(state.clock.pending.size, 0);
+    state.key();
+    assert.equal(api.isVisible(), true);
 });
 
 test("リサイズ・画像ロード・再表示時にレイアウトを更新し、スライド間の表示幅を揃える", () => {

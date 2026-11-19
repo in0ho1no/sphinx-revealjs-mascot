@@ -1,12 +1,16 @@
 """両記法のスライド設定と fragment の HTML 出力を検証する。"""
 
 import json
+import re
 import subprocess
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import Any
 
 import pytest
+
+from sphinx_revealjs_mascot.config import ACTIONS, OPTIONAL_STATES, REQUIRED_STATES
 
 _REPOSITORY = Path(__file__).resolve().parents[2]
 
@@ -99,6 +103,13 @@ def test_existing_samples_embed_slide_settings_and_grouped_fragments(tmp_path: P
     fragments.feed((tmp_path / 'output/fragments.html').read_text(encoding='utf-8'))
     assert [fragment['action'] for fragment in fragments.fragments] == ['surprise', 'jump', None, 'wink']
     assert fragments.fragments[2]['items'] == 2
+    actions = _Markup()
+    actions.feed((tmp_path / 'output/actions.html').read_text(encoding='utf-8'))
+    configured = [section for section in actions.sections if 'data-mascot-action' in section]
+    assert [section['data-mascot-action'] for section in configured] == ['tilt', 'trouble', 'proud', 'happy']
+    assert [section.get('data-mascot-position') for section in configured] == ['top-right', 'bottom-left', None, 'top-left']
+    assert [fragment['action'] for fragment in actions.fragments] == ['proud', 'tilt']
+    assert set(json.loads(actions.config)['actions']) >= {'happy', 'tilt', 'trouble', 'proud'}
 
 
 @pytest.fixture
@@ -186,3 +197,128 @@ def test_custom_configuration_and_images_reach_output(source: Path, tmp_path: Pa
     assert config_values['toggleKey'] == 'x'
     for state, url in config_values['images'].items():
         assert (tmp_path / 'output' / url).read_bytes() == (image_dir / f'bird_{state}.png').read_bytes()
+
+
+_PLAIN_SLIDE = 'Deck\n====\n\nSlide\n-----\n\nText.\n'
+
+
+def _use_custom_images(source: Path, states: tuple[str, ...], filename: str = '{state}.png', pattern: str = '{state}.png') -> Path:
+    image_dir = source / 'pictures'
+    image_dir.mkdir()
+    for state in states:
+        (image_dir / filename.format(state=state)).write_bytes(f'custom {state}'.encode())
+    with (source / 'conf.py').open('a', encoding='utf-8') as config:
+        config.write(f"revealjs_mascot_image_dir = 'pictures'\nrevealjs_mascot_image_pattern = {pattern!r}\n")
+    return image_dir
+
+
+def _output(output: Path) -> tuple[_Markup, dict[str, Any], set[str]]:
+    markup = _Markup()
+    markup.feed((output / 'index.html').read_text(encoding='utf-8'))
+    files = {path.name for path in (output / '_static/sphinx-revealjs-mascot/images').iterdir()}
+    return markup, json.loads(markup.config), files
+
+
+@pytest.mark.parametrize(
+    ('pattern', 'filename', 'optional'),
+    [
+        ('{state}.png', '{state}.png', ()),
+        ('file-name_{state}.png', 'bird_{state}.png', ('happy',)),
+        ('{state}_file-name.png', '{state}_bird.png', OPTIONAL_STATES),
+    ],
+)
+def test_custom_images_in_output_match_resolved_states(source: Path, tmp_path: Path, pattern: str, filename: str, optional: tuple[str, ...]) -> None:
+    states = REQUIRED_STATES + optional
+    image_dir = _use_custom_images(source, states, filename, pattern)
+    (image_dir / 'logo.png').write_bytes(b'unrelated')
+    (source / 'index.rst').write_text(_PLAIN_SLIDE, encoding='utf-8')
+    output = tmp_path / 'output'
+    result = _build(source, output, source)
+    assert result.returncode == 0, result.stdout + result.stderr
+    _, config, files = _output(output)
+    assert list(config['images']) == list(states)
+    assert list(config['actions']) == [name for name, action in ACTIONS.items() if action.image in states]
+    assert files == {f'{state}.png' for state in states}
+    for state in states:
+        assert (output / f'_static/sphinx-revealjs-mascot/images/{state}.png').read_bytes() == f'custom {state}'.encode()
+
+
+@pytest.mark.parametrize(
+    ('suffix', 'content'),
+    [
+        ('rst', 'Deck\n====\n\nSlide\n-----\n\n.. mascot::\n   :action: happy\n\n.. mascot-fragment::\n   :action: happy\n\n   Text.\n'),
+        ('md', '# Deck\n\n## Slide\n\n```{mascot}\n:action: happy\n```\n\n```{mascot-fragment}\n:action: happy\n\nText.\n```\n'),
+    ],
+)
+def test_optional_action_with_its_image_reaches_slide_fragment_and_config(source: Path, tmp_path: Path, suffix: str, content: str) -> None:
+    _use_custom_images(source, (*REQUIRED_STATES, 'happy'))
+    (source / f'index.{suffix}').write_text(content, encoding='utf-8')
+    result = _build(source, tmp_path / 'output', source)
+    assert result.returncode == 0, result.stdout + result.stderr
+    markup, config, _ = _output(tmp_path / 'output')
+    assert [section['data-mascot-action'] for section in markup.sections if 'data-mascot-action' in section] == ['happy']
+    assert [fragment['action'] for fragment in markup.fragments] == ['happy']
+    assert 'happy' in config['actions']
+    assert 'happy' in config['images']
+    assert 'tilt' not in config['actions']
+
+
+@pytest.mark.parametrize(
+    ('suffix', 'content'),
+    [
+        ('rst', 'Deck\n====\n\nSlide\n-----\n\n.. mascot::\n   :action: tilt\n\nText.\n'),
+        ('md', '# Deck\n\n## Slide\n\n```{mascot-fragment}\n:action: tilt\n\nText.\n```\n'),
+    ],
+)
+def test_optional_action_without_its_image_is_build_error(source: Path, tmp_path: Path, suffix: str, content: str) -> None:
+    _use_custom_images(source, (*REQUIRED_STATES, 'happy'))
+    (source / f'index.{suffix}').write_text(content, encoding='utf-8')
+    result = _build(source, tmp_path / 'output', source, strict=False)
+    assert result.returncode != 0
+    assert re.search(rf"index\.{suffix}:\d+: アクション 'tilt' には状態画像 'tilt' が必要です", result.stdout + result.stderr)
+
+
+def test_missing_image_error_points_to_the_included_file(source: Path, tmp_path: Path) -> None:
+    _use_custom_images(source, REQUIRED_STATES)
+    (source / 'slide.inc').write_text('Slide\n-----\n\nOne.\n\nTwo.\n\n.. mascot::\n   :action: tilt\n', encoding='utf-8')
+    (source / 'index.rst').write_text('Deck\n====\n\n.. include:: slide.inc\n', encoding='utf-8')
+    result = _build(source, tmp_path / 'output', source, strict=False)
+    assert result.returncode != 0
+    assert re.search(r"slide\.inc:8: アクション 'tilt' には状態画像 'tilt' が必要です", result.stdout + result.stderr)
+
+
+def test_incremental_build_follows_optional_images_and_keeps_other_static_files(source: Path, tmp_path: Path) -> None:
+    image_dir = _use_custom_images(source, REQUIRED_STATES)
+    badge = source / '_static/sphinx-revealjs-mascot/images/badge.png'
+    badge.parent.mkdir(parents=True)
+    badge.write_bytes(b'badge')
+    with (source / 'conf.py').open('a', encoding='utf-8') as conf:
+        conf.write("revealjs_static_path = ['_static']\n")
+    (source / 'index.rst').write_text(_PLAIN_SLIDE, encoding='utf-8')
+    output = tmp_path / 'output'
+    happy = image_dir / 'happy.png'
+    for states in (REQUIRED_STATES, (*REQUIRED_STATES, 'happy'), REQUIRED_STATES):
+        if 'happy' in states:
+            happy.write_bytes(b'happy')
+        else:
+            happy.unlink(missing_ok=True)
+        result = _build(source, output, source)
+        assert result.returncode == 0, result.stdout + result.stderr
+        _, config, files = _output(output)
+        assert list(config['images']) == list(states)
+        assert files == {f'{state}.png' for state in states} | {'badge.png'}
+
+
+@pytest.mark.parametrize('also_from_output', [False, True])
+def test_removing_an_optional_image_in_use_fails_the_next_build(source: Path, tmp_path: Path, also_from_output: bool) -> None:
+    image_dir = _use_custom_images(source, (*REQUIRED_STATES, 'happy'))
+    (source / 'index.rst').write_text('Deck\n====\n\nSlide\n-----\n\n.. mascot::\n   :action: happy\n\nText.\n', encoding='utf-8')
+    output = tmp_path / 'output'
+    first = _build(source, output, source)
+    assert first.returncode == 0, first.stdout + first.stderr
+    (image_dir / 'happy.png').unlink()
+    if also_from_output:
+        (output / '_static/sphinx-revealjs-mascot/images/happy.png').unlink()
+    second = _build(source, output, source, strict=False)
+    assert second.returncode != 0
+    assert "アクション 'happy' には状態画像 'happy' が必要です" in second.stdout + second.stderr

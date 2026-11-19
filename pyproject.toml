@@ -19,7 +19,7 @@ build-backend = "hatchling.build"
 packages = ["src/sphinx_revealjs_mascot"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"examples/_static/mascot/joubitaki" = "sphinx_revealjs_mascot/static/sphinx-revealjs-mascot/images"
+"examples/_static/mascot/joubitaki" = "sphinx_revealjs_mascot/images"
 "third_party/README.md" = "sphinx_revealjs_mascot/third_party/README.md"
 "third_party/manifest.json" = "sphinx_revealjs_mascot/third_party/manifest.json"
 "third_party/NOTICES.txt" = "sphinx_revealjs_mascot/third_party/NOTICES.txt"

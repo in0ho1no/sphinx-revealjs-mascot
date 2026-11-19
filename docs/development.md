@@ -68,6 +68,7 @@ uv run --frozen --no-sync --offline sphinx-build -W -b revealjs examples example
 | `examples/_build/revealjs/slides.html` | スライドごとの位置・向き、指定のないスライドでの既定位置への復帰 |
 | `examples/_build/revealjs/fragments.html` | ディレクティブで囲んだ段落・箇条書きのまとまった段階表示 |
 | `examples/_build/revealjs/positions.html` | 四隅と任意座標の位置、モーション用の余白 |
+| `examples/_build/revealjs/actions.html` | 追加アクション（`happy`・`tilt`・`trouble`・`proud`）の表情と動き、四隅での余白 |
 
 戻る操作でも移動先の位置を使います。アクション指定はスライド・fragment のイベントから実行します。
 設定 API と画像の命名形式は [仕様書](SPEC.md#extension-configuration) を参照してください。
@@ -86,6 +87,7 @@ uv run --frozen --no-sync --offline sphinx-build -W -b revealjs examples example
 
 設定と既定値、対象イベントの定義は仕様書を参照してください。
 表示幅・周期・振れ幅・リアクションの長さは現在の値を初版の既定値としています。
+追加アクションの値は初期値です。`actions.html` で確認し、調整した値は `config.py` に反映します。
 自動テストとブラウザでの描画・操作の確認範囲、保守上の判断は [実装・検証の記録](Plan.md) を参照してください。
 
 ### 表示幅と余白

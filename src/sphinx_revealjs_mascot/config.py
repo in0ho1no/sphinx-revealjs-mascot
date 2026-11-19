@@ -9,7 +9,8 @@ from typing import Any
 from sphinx.config import Config
 from sphinx.errors import ConfigError
 
-STATES = ('normal', 'blink', 'sleepy', 'surprise')
+REQUIRED_STATES = ('normal', 'blink', 'sleepy', 'surprise')
+OPTIONAL_STATES = ('happy', 'tilt', 'trouble', 'proud')
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,10 @@ ACTIONS = {
     'jump': Action('normal', duration=600, motion=True),
     'wink': Action('blink', duration=180),
     'surprise': Action('surprise', duration=700, motion=True),
+    'happy': Action('happy', duration=900, motion=True),
+    'tilt': Action('tilt', duration=1100, motion=True),
+    'trouble': Action('trouble', duration=900, motion=True),
+    'proud': Action('proud', duration=900, motion=True),
     'doze': Action('sleepy', explicit=False, motion=True),
     'wake': Action('surprise', duration=500, explicit=False, motion=True),
 }
@@ -38,6 +43,12 @@ MOTION = {
     'breath_duration': 2900,
     'jump_height': 0.15,
     'surprise_scale': 1.06,
+    'happy_height': 0.1,
+    'happy_angle': 3,
+    'tilt_angle': 8,
+    'trouble_shift': 0.02,
+    'trouble_squash': 0.96,
+    'proud_scale': 1.05,
     'wake_height': 0.08,
     'wake_angle': 3,
     'doze_min_angle': 2,
@@ -100,43 +111,51 @@ def positive_number(name: str, value: object, maximum: float | None = None) -> f
     raise ConfigError(f'{name} は有限の正の数値で指定してください{limit}: {value!r}')
 
 
+def _common_name(filename: str, pattern: str, state: str) -> str:
+    """共通名を含む命名形式のファイル名から、指定状態の共通名を取り出す。該当しなければ空文字を返す。"""
+    if pattern == IMAGE_PATTERNS[1]:
+        fixed = f'_{state}.png'
+        return filename[: -len(fixed)] if filename.endswith(fixed) else ''
+    fixed = f'{state}_'
+    return filename[len(fixed) : -4] if filename.startswith(fixed) and filename.endswith('.png') else ''
+
+
 def resolve_images(directory: Path, pattern: str) -> dict[str, Path]:
-    """指定した命名形式で完全な画像セットを1つ検出する。"""
+    """指定した命名形式で必須画像のセットを1つ検出し、同じ命名の追加画像を加える。"""
     if pattern not in IMAGE_PATTERNS:
         raise ConfigError(f'revealjs_mascot_image_pattern が不正です: {pattern!r}。指定可能: {IMAGE_PATTERNS}')
     if not directory.is_dir():
         raise ConfigError(f'画像フォルダが存在しません: {directory}')
     if pattern == IMAGE_PATTERNS[0]:
-        images = {state: directory / pattern.format(state=state) for state in STATES}
+        images = {state: directory / pattern.format(state=state) for state in REQUIRED_STATES}
         missing = [str(path) for path in images.values() if not path.is_file()]
         if missing:
             raise ConfigError('必要な画像が不足しています: ' + ', '.join(missing))
-        return images
+        optional = {state: directory / pattern.format(state=state) for state in OPTIONAL_STATES}
+        return images | {state: path for state, path in optional.items() if path.is_file()}
 
     candidates: dict[str, dict[str, Path]] = {}
     for path in sorted(directory.iterdir()):
         if not path.is_file():
             continue
-        for state in STATES:
-            fixed = f'_{state}.png' if pattern == IMAGE_PATTERNS[1] else f'{state}_'
-            if pattern == IMAGE_PATTERNS[1] and path.name.endswith(fixed):
-                common = path.name[: -len(fixed)]
-            elif pattern == IMAGE_PATTERNS[2] and path.name.startswith(fixed) and path.name.endswith('.png'):
-                common = path.name[len(fixed) : -4]
-            else:
-                continue
+        for state in REQUIRED_STATES + OPTIONAL_STATES:
+            common = _common_name(path.name, pattern, state)
             if common:
                 candidates.setdefault(common, {})[state] = path
-    complete = [images for images in candidates.values() if set(images) == set(STATES)]
+    # 追加画像まで判定に含めると、別の共通名の追加画像が置かれただけで混在エラーになるため、必須画像だけで判定する。
+    required = {common: {s: p for s, p in images.items() if s in REQUIRED_STATES} for common, images in candidates.items()}
+    required = {common: images for common, images in required.items() if images}
+    complete = [common for common, images in required.items() if len(images) == len(REQUIRED_STATES)]
     if len(complete) > 1:
         raise ConfigError(f'画像セットが複数見つかりました。フォルダを分けてください: {directory}')
     if complete:
-        return complete[0]
-    filenames = ', '.join(path.name for images in candidates.values() for path in images.values())
-    if len(candidates) > 1:
+        found = candidates[complete[0]]
+        return {state: found[state] for state in REQUIRED_STATES + OPTIONAL_STATES if state in found}
+    filenames = ', '.join(path.name for images in required.values() for path in images.values())
+    if len(required) > 1:
         raise ConfigError(f'4種類の画像が共通のfile-nameで揃っていません: {directory}: {filenames}')
-    found = next(iter(candidates.values()), {})
-    missing_states = ', '.join(state for state in STATES if state not in found)
+    found = next(iter(required.values()), {})
+    missing_states = ', '.join(state for state in REQUIRED_STATES if state not in found)
     raise ConfigError(f'必要な画像が不足しています: {directory}: {missing_states}。候補: {filenames or "なし"}')
 
 
