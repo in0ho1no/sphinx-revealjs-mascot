@@ -117,10 +117,13 @@ def test_changed_image_states_reread_every_page(tmp_path: Path, record: str | No
     destination.mkdir(parents=True)
     for state in current:
         (destination / f'{state}.png').write_bytes(b'')
+    record_path = tmp_path / '.sphinx-revealjs-mascot.json'
     if record is not None:
-        (tmp_path / '.sphinx-revealjs-mascot.json').write_text(record, encoding='utf-8')
+        record_path.write_text(record, encoding='utf-8')
     settings = SimpleNamespace(images={state: tmp_path / f'{state}.png' for state in current})
     env = SimpleNamespace(domaindata={'sphinx-revealjs-mascot': {'settings': settings}}, found_docs={'nested/second', 'index'})
     app = SimpleNamespace(outdir=str(tmp_path), builder=SimpleNamespace(name=builder), env=env)
     docs = mascot._outdated_by_images(cast(Sphinx, app), cast(BuildEnvironment, env), set(), set(), set())
     assert docs == (['index', 'nested/second'] if reread else [])
+    # 全ページを読み直すときは、書き出しが中断しても次回に読み直すよう記録を取り除く。
+    assert record_path.is_file() == (record is not None and not reread)

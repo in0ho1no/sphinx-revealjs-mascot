@@ -119,6 +119,9 @@ def _outdated_by_images(app: Sphinx, env: BuildEnvironment, added: Set[str], cha
     # 記録がなく前回の構成を確認できない場合も、既存ページの指定を見逃さないよう全ページを読み直す。
     if _recorded_states(app) == set(_settings(app).images):
         return []
+    # 記録を残したまま書き出しが中断すると、元の構成に戻した次のビルドで記録と一致し、一部のページだけが別の構成のまま残る。
+    # 成功したビルドの最後に書き直すまで記録を取り除き、中断後のビルドでも全ページを読み直す。
+    _state_record(app).unlink(missing_ok=True)
     return sorted(env.found_docs)
 
 
