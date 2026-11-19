@@ -90,18 +90,25 @@ def test_missing_images_are_not_replaced_by_standard_images(tmp_path: Path) -> N
         resolve_images(tmp_path, IMAGE_PATTERNS[0])
 
 
+@pytest.mark.parametrize('with_optional', [False, True])
 @pytest.mark.parametrize('suffix', [False, True])
-def test_multiple_complete_image_sets_are_rejected(tmp_path: Path, suffix: bool) -> None:
+def test_multiple_complete_image_sets_are_rejected(tmp_path: Path, suffix: bool, with_optional: bool) -> None:
     _image_set(tmp_path, 'bird', suffix)
     _image_set(tmp_path, 'dog', suffix)
+    if with_optional:
+        _image_set(tmp_path, 'bird', suffix, OPTIONAL_STATES)
     with pytest.raises(ConfigError, match='画像セットが複数見つかりました'):
         resolve_images(tmp_path, IMAGE_PATTERNS[2 if suffix else 1])
 
 
-def test_mixed_common_names_show_candidate_files(tmp_path: Path) -> None:
+@pytest.mark.parametrize('with_optional', [False, True])
+def test_mixed_common_names_show_candidate_files(tmp_path: Path, with_optional: bool) -> None:
     (tmp_path / 'bird_normal.png').write_bytes(b'normal')
     (tmp_path / 'dog_blink.png').write_bytes(b'blink')
-    with pytest.raises(ConfigError, match=r'共通のfile-name.*bird_normal\.png.*dog_blink\.png'):
+    if with_optional:
+        _image_set(tmp_path, 'bird', False, OPTIONAL_STATES)
+        _image_set(tmp_path, 'cat', False, ('happy',))
+    with pytest.raises(ConfigError, match=r'共通のfile-nameで揃っていません: .*: bird_normal\.png, dog_blink\.png$'):
         resolve_images(tmp_path, IMAGE_PATTERNS[1])
 
 

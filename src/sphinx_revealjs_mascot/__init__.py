@@ -11,7 +11,16 @@ from sphinx.application import Sphinx
 from sphinx.util.osutil import relative_uri
 from sphinx.util.typing import ExtensionMetadata
 
-from sphinx_revealjs_mascot.config import ACTIONS, CONFIG_DEFAULTS, DEFAULT_ACTIONS, MOTION, Settings, resolve_settings
+from sphinx_revealjs_mascot.config import (
+    ACTIONS,
+    CONFIG_DEFAULTS,
+    DEFAULT_ACTIONS,
+    MOTION,
+    OPTIONAL_STATES,
+    REQUIRED_STATES,
+    Settings,
+    resolve_settings,
+)
 from sphinx_revealjs_mascot.directives import (
     MascotDirective,
     MascotFragment,
@@ -75,10 +84,11 @@ def _copy_images(app: Sphinx, exception: Exception | None) -> None:
     destination = Path(app.outdir) / '_static' / _ASSET_NAME / 'images'
     destination.mkdir(parents=True, exist_ok=True)
     images = _settings(app).images
-    # 静的ファイルの登録では同梱の標準画像もフォルダごとコピーされ、前回のビルドの画像も上書きされずに残るため、解決していない状態の画像を消す。
-    for path in destination.glob('*.png'):
-        if path.stem not in images:
-            path.unlink()
+    # 静的ファイルの登録では同梱の標準画像もフォルダごとコピーされ、前回のビルドの画像も上書きされずに残る。
+    # 利用者が静的ファイルとして同じフォルダへ置いた画像を消さないよう、削除は解決しなかった状態名の画像に限る。
+    for state in REQUIRED_STATES + OPTIONAL_STATES:
+        if state not in images:
+            (destination / f'{state}.png').unlink(missing_ok=True)
     for state, source in images.items():
         shutil.copyfile(source, destination / f'{state}.png')
     shutil.copyfile(project_license(), destination.parent / 'LICENSE')
