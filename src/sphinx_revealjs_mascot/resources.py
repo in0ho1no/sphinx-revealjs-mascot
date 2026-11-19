@@ -9,7 +9,8 @@ STATIC_DIR = PACKAGE_DIR / 'static'
 
 def standard_image_directory() -> Path:
     """配布物の標準画像、または開発中の画像原本の所在を返す。"""
-    bundled = STATIC_DIR / ASSET_NAME / 'images'
+    # 静的ファイルのフォルダに置くと、Sphinx が検証の前に一括コピーし、失敗したビルドでも出力済みの画像を上書きする。
+    bundled = PACKAGE_DIR / 'images'
     if bundled.is_dir():
         return bundled
     return PACKAGE_DIR.parents[1] / 'examples/_static/mascot/joubitaki'
